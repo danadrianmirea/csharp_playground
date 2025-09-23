@@ -8,9 +8,6 @@ obj/
 *.userosscache
 *.sln.docstates
 
-# VS Code settings
-.vscode/
-
 # NuGet packages
 *.nupkg
 # NuGet package restore results
