@@ -1,0 +1,38 @@
+# .NET build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code settings
+.vscode/
+
+# NuGet packages
+*.nupkg
+# NuGet package restore results
+packages/
+# Project lock files
+project.lock.json
+
+# Visual Studio for Mac
+*.pidb
+*.userprefs
+
+# Rider
+.idea/
+*.sln.iml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Others
+*.vspscc
+*.vssscc
