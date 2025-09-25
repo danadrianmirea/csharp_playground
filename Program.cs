@@ -4,6 +4,9 @@ class Program {
 
     static void Main()
     {
-        Console.WriteLine("Hello, World!");
+        var number = 2;
+        var letter = 'A';
+        var text = "Hello, World!";
+        Console.WriteLine(text);
     }
 }
