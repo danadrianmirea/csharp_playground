@@ -1,7 +1,7 @@
 using System;
 
-class Program {
-
+class Program 
+{
     static void SplitString()
     {
         var text = "Hello, World!";
@@ -15,5 +15,8 @@ class Program {
     static void Main()
     {
         SplitString();
+
+        BasicClass b;
+        b.TestMethod();
     }
 }
