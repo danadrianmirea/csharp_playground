@@ -30,5 +30,9 @@ class Program
         MathOperations math = new MathOperations();
         int result = math.Add(2, 3);
         Console.WriteLine("add result = " + result);
+
+        Car car = new Car("BMW", "E90", 2009);
+        car.Accelerate(100);
+        car.DisplayInfo();
     }
 }
