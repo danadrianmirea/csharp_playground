@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 
 class Program 
 {
@@ -25,5 +26,9 @@ class Program
 
         ControlStructuresDemo demoControl = new ControlStructuresDemo();
         demoControl.Demo();
+
+        MathOperations math = new MathOperations();
+        int result = math.Add(2, 3);
+        Console.WriteLine("add result = " + result);
     }
 }
