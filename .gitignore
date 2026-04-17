@@ -31,5 +31,6 @@ project.lock.json
 Thumbs.db
 
 # Others
+*.vs
 *.vspscc
 *.vssscc

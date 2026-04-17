@@ -16,7 +16,8 @@ class Program
     {
         SplitString();
 
-        BasicClass b;
-        b.TestMethod();
+        BasicClass b = new BasicClass();
+        int num = b.TestMethod();
+        Console.WriteLine("num = " + num);
     }
 }
