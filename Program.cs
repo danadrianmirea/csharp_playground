@@ -19,5 +19,8 @@ class Program
         BasicClass b = new BasicClass();
         int num = b.TestMethod();
         Console.WriteLine("num = " + num);
+
+        DataTypesDemo demo = new DataTypesDemo();
+        demo.Demo();
     }
 }
