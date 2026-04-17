@@ -20,7 +20,10 @@ class Program
         int num = b.TestMethod();
         Console.WriteLine("num = " + num);
 
-        DataTypesDemo demo = new DataTypesDemo();
-        demo.Demo();
+        DataTypesDemo demoTypes = new DataTypesDemo();
+        demoTypes.Demo();
+
+        ControlStructuresDemo demoControl = new ControlStructuresDemo();
+        demoControl.Demo();
     }
 }
