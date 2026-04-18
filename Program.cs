@@ -35,5 +35,8 @@ class Program
         Car car = new Car("BMW", "E90", 2009);
         car.Accelerate(100);
         car.DisplayInfo();
+
+        CollectionsDemo collectionsDemo = new CollectionsDemo();
+        collectionsDemo.Demo();
     }
 }
