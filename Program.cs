@@ -41,5 +41,8 @@ class Program
 
         InheritanceDemo.InheritanceDemo inheritanceDemo = new InheritanceDemo.InheritanceDemo();
         inheritanceDemo.Demo();
+
+        ExceptionHandlingDemo.ExceptionHandlingDemo exceptionDemo = new ExceptionHandlingDemo.ExceptionHandlingDemo();
+        exceptionDemo.Demo();
     }
 }
