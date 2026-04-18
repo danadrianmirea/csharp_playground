@@ -38,5 +38,8 @@ class Program
 
         CollectionsDemo collectionsDemo = new CollectionsDemo();
         collectionsDemo.Demo();
+
+        InheritanceDemo.InheritanceDemo inheritanceDemo = new InheritanceDemo.InheritanceDemo();
+        inheritanceDemo.Demo();
     }
 }
