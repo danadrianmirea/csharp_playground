@@ -1,0 +1,4 @@
+Line 1: Written with WriteAllLines
+Line 2: Another line
+Line 3: Third line
+Line 4: Final line

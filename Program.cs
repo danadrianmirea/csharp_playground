@@ -44,5 +44,8 @@ class Program
 
         ExceptionHandlingDemo.ExceptionHandlingDemo exceptionDemo = new ExceptionHandlingDemo.ExceptionHandlingDemo();
         exceptionDemo.Demo();
+
+        FileOperationsDemo.FileOperations fileOps = new FileOperationsDemo.FileOperations();
+        fileOps.Demo();
     }
 }
