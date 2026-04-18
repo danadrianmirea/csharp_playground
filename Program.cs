@@ -47,5 +47,8 @@ class Program
 
         FileOperationsDemo.FileOperations fileOps = new FileOperationsDemo.FileOperations();
         fileOps.Demo();
+
+        StringOperationsDemo.StringOperations stringOps = new StringOperationsDemo.StringOperations();
+        stringOps.Demo();
     }
 }
