@@ -50,5 +50,8 @@ class Program
 
         StringOperationsDemo.StringOperations stringOps = new StringOperationsDemo.StringOperations();
         stringOps.Demo();
+
+        LinqDemo.LinqDemo linqDemo = new LinqDemo.LinqDemo();
+        linqDemo.Demo();
     }
 }
