@@ -42,7 +42,7 @@ namespace FileOperationsDemo
                 {
                     writer.WriteLine("Hello, File I/O World!");
                     writer.WriteLine("This is a sample text file.");
-                    writer.WriteLine($"Created on: {DateTime.Now}");
+                    //writer.WriteLine($"Created on: {DateTime.Now}");
                     writer.WriteLine("Line 4: More content here.");
                     writer.WriteLine("Line 5: The quick brown fox jumps over the lazy dog.");
                     Console.WriteLine($"Written content to: {textFilePath}");
@@ -70,7 +70,7 @@ namespace FileOperationsDemo
                 {
                     writer.WriteLine("\n[Appended Content]");
                     writer.WriteLine("This line was appended to the file.");
-                    writer.WriteLine($"Appended at: {DateTime.Now:HH:mm:ss}");
+                    //writer.WriteLine($"Appended at: {DateTime.Now:HH:mm:ss}");
                     Console.WriteLine("Appended 3 lines to the file.");
                 }
                 
