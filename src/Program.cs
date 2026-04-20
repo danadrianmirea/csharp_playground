@@ -53,5 +53,8 @@ class Program
 
         LinqDemo.LinqDemo linqDemo = new LinqDemo.LinqDemo();
         linqDemo.Demo();
+        
+        DelegateEventDemo.DelegateEventDemo delegateDemo = new DelegateEventDemo.DelegateEventDemo();
+        delegateDemo.Demo();
     }
 }
