@@ -15,46 +15,49 @@ class Program
 
     static void Main()
     {
-        SplitString();
+        // SplitString();
 
-        BasicClass b = new BasicClass();
-        int num = b.TestMethod();
-        Console.WriteLine("num = " + num);
+        // BasicClass b = new BasicClass();
+        // int num = b.TestMethod();
+        // Console.WriteLine("num = " + num);
 
-        DataTypesDemo demoTypes = new DataTypesDemo();
-        demoTypes.Demo();
+        // DataTypesDemo demoTypes = new DataTypesDemo();
+        // demoTypes.Demo();
 
-        ControlStructuresDemo demoControl = new ControlStructuresDemo();
-        demoControl.Demo();
+        // ControlStructuresDemo demoControl = new ControlStructuresDemo();
+        // demoControl.Demo();
 
-        MathOperations math = new MathOperations();
-        int result = math.Add(2, 3);
-        Console.WriteLine("add result = " + result);
-        math.Demo();
+        // MathOperations math = new MathOperations();
+        // int result = math.Add(2, 3);
+        // Console.WriteLine("add result = " + result);
+        // math.Demo();
 
-        Car car = new Car("BMW", "E90", 2009);
-        car.Accelerate(100);
-        car.DisplayInfo();
+        // Car car = new Car("BMW", "E90", 2009);
+        // car.Accelerate(100);
+        // car.DisplayInfo();
 
-        CollectionsDemo collectionsDemo = new CollectionsDemo();
-        collectionsDemo.Demo();
+        // CollectionsDemo collectionsDemo = new CollectionsDemo();
+        // collectionsDemo.Demo();
 
-        InheritanceDemo.InheritanceDemo inheritanceDemo = new InheritanceDemo.InheritanceDemo();
-        inheritanceDemo.Demo();
+        // InheritanceDemo.InheritanceDemo inheritanceDemo = new InheritanceDemo.InheritanceDemo();
+        // inheritanceDemo.Demo();
 
-        ExceptionHandlingDemo.ExceptionHandlingDemo exceptionDemo = new ExceptionHandlingDemo.ExceptionHandlingDemo();
-        exceptionDemo.Demo();
+        // ExceptionHandlingDemo.ExceptionHandlingDemo exceptionDemo = new ExceptionHandlingDemo.ExceptionHandlingDemo();
+        // exceptionDemo.Demo();
 
-        FileOperationsDemo.FileOperations fileOps = new FileOperationsDemo.FileOperations();
-        fileOps.Demo();
+        // FileOperationsDemo.FileOperations fileOps = new FileOperationsDemo.FileOperations();
+        // fileOps.Demo();
 
-        StringOperationsDemo.StringOperations stringOps = new StringOperationsDemo.StringOperations();
-        stringOps.Demo();
+        // StringOperationsDemo.StringOperations stringOps = new StringOperationsDemo.StringOperations();
+        // stringOps.Demo();
 
-        LinqDemo.LinqDemo linqDemo = new LinqDemo.LinqDemo();
-        linqDemo.Demo();
+        // LinqDemo.LinqDemo linqDemo = new LinqDemo.LinqDemo();
+        // linqDemo.Demo();
         
-        DelegateEventDemo.DelegateEventDemo delegateDemo = new DelegateEventDemo.DelegateEventDemo();
-        delegateDemo.Demo();
+        // DelegateEventDemo.DelegateEventDemo delegateDemo = new DelegateEventDemo.DelegateEventDemo();
+        // delegateDemo.Demo();
+
+        SimpleWebServer server = new SimpleWebServer(8080);
+        server.run();
     }
 }
