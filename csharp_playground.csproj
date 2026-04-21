@@ -7,4 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Graphical_MAUI/**/*.cs" />
+    <Compile Remove="Graphical_MAUI/**/*.xaml.cs" />
+    <None Remove="Graphical_MAUI/**" />
+  </ItemGroup>
+
 </Project>
