@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using RestAPI;
 
 class Program 
 {
@@ -57,7 +58,7 @@ class Program
         // DelegateEventDemo.DelegateEventDemo delegateDemo = new DelegateEventDemo.DelegateEventDemo();
         // delegateDemo.Demo();
 
-        SimpleWebServer server = new SimpleWebServer(8080);
-        server.run();
+        EquipmentRestApi server = new EquipmentRestApi(8080);
+        server.Run();
     }
 }
