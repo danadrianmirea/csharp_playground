@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using Graphical_OpenGL;
 using RestAPI;
 
 class Program 
@@ -58,7 +59,10 @@ class Program
         // DelegateEventDemo.DelegateEventDemo delegateDemo = new DelegateEventDemo.DelegateEventDemo();
         // delegateDemo.Demo();
 
-        EquipmentRestApi server = new EquipmentRestApi(8080);
-        server.Run();
+        //EquipmentRestApi server = new EquipmentRestApi(8080);
+        //server.Run();
+
+        CubeDemo demo = new CubeDemo();
+        demo.Run();
     }
 }

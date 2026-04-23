@@ -13,4 +13,8 @@
     <None Remove="Graphical_MAUI/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="OpenTK" Version="4.9.4" />
+  </ItemGroup>
+
 </Project>
