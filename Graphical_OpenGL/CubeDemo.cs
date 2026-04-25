@@ -120,7 +120,7 @@ public class CubeDemo : GameWindow
                new NativeWindowSettings
                {
                    ClientSize = new Vector2i(800, 600),
-                   Title = "Rotating 3D Cube - OpenTK",
+                   Title = "3D Cube with Freelook camera",
                    // This is needed for OpenGL 4.x on Windows
                    APIVersion = new Version(3, 3),
                    Profile = ContextProfile.Core,
