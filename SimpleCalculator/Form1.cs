@@ -15,6 +15,7 @@ public partial class Form1 : Form
         InitializeComponent();
         this.KeyPreview = true;
         this.KeyDown += Form1_KeyDown;
+        this.KeyPress += Form1_KeyPress;
     }
 
     private void Button_Click(object? sender, EventArgs e)
@@ -76,6 +77,13 @@ public partial class Form1 : Form
 
     private void Form1_KeyDown(object? sender, KeyEventArgs e)
     {
+        // Skip digit keys when Shift is pressed (they produce symbols like *, (, etc. via KeyPress)
+        if (e.Shift || e.Alt)
+        {
+            e.Handled = true;
+            return;
+        }
+
         switch (e.KeyCode)
         {
             case Keys.D0: case Keys.NumPad0: InputDigit('0'); break;
@@ -93,10 +101,41 @@ public partial class Form1 : Form
             case Keys.Subtract: case Keys.OemMinus: PerformOperation("-"); break;
             case Keys.Multiply: PerformOperation("*"); break;
             case Keys.Divide: case Keys.Oem2: PerformOperation("/"); break;
+            case Keys.Oemplus: CalculateResult(); break;
             case Keys.Enter: CalculateResult(); break;
             case Keys.Back: Backspace(); break;
             case Keys.Delete: ClearEntry(); break;
             case Keys.Escape: ClearAll(); break;
+        }
+        e.Handled = true;
+    }
+
+    private void Form1_KeyPress(object? sender, KeyPressEventArgs e)
+    {
+        switch (e.KeyChar)
+        {
+            case '*':
+                PerformOperation("*");
+                break;
+            case '/':
+                PerformOperation("/");
+                break;
+            case '+':
+                PerformOperation("+");
+                break;
+            case '-':
+                PerformOperation("-");
+                break;
+            case '=':
+                CalculateResult();
+                break;
+            case '%':
+                Percent();
+                break;
+            case '.':
+            case ',':
+                InputDecimal();
+                break;
         }
         e.Handled = true;
     }

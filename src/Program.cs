@@ -2,7 +2,6 @@ using System;
 using System.Linq.Expressions;
 using Graphical_OpenGL;
 using RestAPI;
-using SimpleCalculator;
 
 class Program 
 {
@@ -63,10 +62,7 @@ class Program
         //EquipmentRestApi server = new EquipmentRestApi(8080);
         //server.Run();
 
-        //CubeDemo demo = new CubeDemo();
-        //demo.Run();
-
-        CalculatorUI calc = new CalculatorUI();
-        calc.Run();
+        CubeDemo demo = new CubeDemo();
+        demo.Run();
     }
 }
