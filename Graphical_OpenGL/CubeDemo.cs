@@ -91,6 +91,12 @@ public class CubeDemo : GameWindow
     private int _edgeVAO;
     private int _edgeVBO;
 
+    // Crosshair resources
+    private int _crosshairVAO;
+    private int _crosshairVBO;
+    private int _crosshairShaderProgram;
+    private int _crosshairProjectionLocation;
+
     private double _time;
 
     // ---- Camera state ----
@@ -243,8 +249,85 @@ public class CubeDemo : GameWindow
 
         GL.BindVertexArray(0);
 
+        // ---- Set up crosshair ----
+        SetupCrosshair();
+
         Console.WriteLine("OpenGL Cube Demo loaded. Close the window to exit.");
 
+    }
+
+    private void SetupCrosshair()
+    {
+        // Crosshair: a small circle approximated by a line loop (32 segments)
+        const int segments = 32;
+        const float radius = 5f; // 5 pixels
+        float[] crosshairVertices = new float[segments * 2]; // x, y only (screen-space 2D)
+
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = MathHelper.TwoPi * i / segments;
+            crosshairVertices[i * 2] = MathF.Cos(angle) * radius;
+            crosshairVertices[i * 2 + 1] = MathF.Sin(angle) * radius;
+        }
+
+        _crosshairVAO = GL.GenVertexArray();
+        GL.BindVertexArray(_crosshairVAO);
+
+        _crosshairVBO = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ArrayBuffer, _crosshairVBO);
+        GL.BufferData(BufferTarget.ArrayBuffer, crosshairVertices.Length * sizeof(float),
+                      crosshairVertices, BufferUsageHint.StaticDraw);
+
+        GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), 0);
+        GL.EnableVertexAttribArray(0);
+
+        GL.BindVertexArray(0);
+
+        // Simple 2D shader for crosshair (no model/view/projection, just screen coords)
+        string crosshairVertexSource = @"
+            #version 330 core
+            layout (location = 0) in vec2 aPos;
+
+            uniform mat4 projection;
+
+            void main()
+            {
+                gl_Position = projection * vec4(aPos, 0.0, 1.0);
+            }
+        ";
+
+        string crosshairFragmentSource = @"
+            #version 330 core
+            out vec4 FragColor;
+
+            void main()
+            {
+                FragColor = vec4(1.0, 1.0, 1.0, 1.0); // white
+            }
+        ";
+
+        int vs = GL.CreateShader(ShaderType.VertexShader);
+        GL.ShaderSource(vs, crosshairVertexSource);
+        GL.CompileShader(vs);
+        CheckShaderCompilation(vs, "CROSSHAIR_VERTEX");
+
+        int fs = GL.CreateShader(ShaderType.FragmentShader);
+        GL.ShaderSource(fs, crosshairFragmentSource);
+        GL.CompileShader(fs);
+        CheckShaderCompilation(fs, "CROSSHAIR_FRAGMENT");
+
+        _crosshairShaderProgram = GL.CreateProgram();
+        GL.AttachShader(_crosshairShaderProgram, vs);
+        GL.AttachShader(_crosshairShaderProgram, fs);
+        GL.LinkProgram(_crosshairShaderProgram);
+        CheckProgramLink(_crosshairShaderProgram);
+
+        GL.DetachShader(_crosshairShaderProgram, vs);
+        GL.DetachShader(_crosshairShaderProgram, fs);
+        GL.DeleteShader(vs);
+        GL.DeleteShader(fs);
+
+        _crosshairProjectionLocation = GL.GetUniformLocation(_crosshairShaderProgram, "projection");
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -253,6 +336,7 @@ public class CubeDemo : GameWindow
 
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+        // ---- Draw 3D scene ----
         GL.UseProgram(_shaderProgram);
         GL.BindVertexArray(_vertexArrayObject);
 
@@ -260,8 +344,6 @@ public class CubeDemo : GameWindow
         _time += args.Time;
 
         // Model matrix: rotate around Y and X axes
-        //var modelMatrix = Matrix4.CreateRotationY((float)_time) *
-                          //Matrix4.CreateRotationX((float)_time * 0.5f);
         var modelMatrix = Matrix4.Identity;
         GL.UniformMatrix4(_modelLocation, false, ref modelMatrix);
 
@@ -277,6 +359,22 @@ public class CubeDemo : GameWindow
         GL.LineWidth(3.0f);
         GL.DrawArrays(PrimitiveType.Lines, 0, _edgeVertices.Length / 6);
         GL.LineWidth(1.0f);
+
+        // ---- Draw crosshair overlay (no depth test, screen-space) ----
+        GL.Disable(EnableCap.DepthTest);
+
+        GL.UseProgram(_crosshairShaderProgram);
+
+        // Orthographic projection matching screen size, centered at (0,0)
+        float halfW = ClientSize.X / 2f;
+        float halfH = ClientSize.Y / 2f;
+        var ortho = Matrix4.CreateOrthographicOffCenter(-halfW, halfW, -halfH, halfH, -1f, 1f);
+        GL.UniformMatrix4(_crosshairProjectionLocation, false, ref ortho);
+
+        GL.BindVertexArray(_crosshairVAO);
+        GL.DrawArrays(PrimitiveType.LineLoop, 0, 32);
+
+        GL.Enable(EnableCap.DepthTest);
 
         SwapBuffers();
 
@@ -312,25 +410,20 @@ public class CubeDemo : GameWindow
         // ---- Mouse freelook (right-click held) ----
         if (_isRightMouseDown)
         {
-            Vector2 currentMouse = MouseState.Position;
-
             if (_firstMove)
             {
-                _lastMousePosition = currentMouse;
                 _firstMove = false;
             }
             else
             {
-                float deltaX = currentMouse.X - _lastMousePosition.X;
-                float deltaY = currentMouse.Y - _lastMousePosition.Y;
+                // Use MouseState.Delta for cursor movement delta when grabbed
+                Vector2 mouseDelta = MouseState.Delta;
 
-                _yaw += deltaX * _mouseSensitivity;
-                _pitch -= deltaY * _mouseSensitivity;
+                _yaw += mouseDelta.X * _mouseSensitivity;
+                _pitch -= mouseDelta.Y * _mouseSensitivity;
 
                 // Clamp pitch to avoid gimbal lock
                 _pitch = MathHelper.Clamp(_pitch, -89f, 89f);
-
-                _lastMousePosition = currentMouse;
             }
 
             UpdateCameraVectors();
@@ -345,6 +438,9 @@ public class CubeDemo : GameWindow
         {
             _isRightMouseDown = true;
             _firstMove = true;
+
+            // Hide cursor and trap it (CursorState.Grabbed also hides the cursor)
+            CursorState = CursorState.Grabbed;
         }
     }
 
@@ -355,6 +451,9 @@ public class CubeDemo : GameWindow
         if (e.Button == MouseButton.Right)
         {
             _isRightMouseDown = false;
+
+            // Show cursor and release it
+            CursorState = CursorState.Normal;
         }
     }
 
@@ -389,7 +488,10 @@ public class CubeDemo : GameWindow
         GL.DeleteVertexArray(_vertexArrayObject);
         GL.DeleteBuffer(_edgeVBO);
         GL.DeleteVertexArray(_edgeVAO);
+        GL.DeleteBuffer(_crosshairVBO);
+        GL.DeleteVertexArray(_crosshairVAO);
         GL.DeleteProgram(_shaderProgram);
+        GL.DeleteProgram(_crosshairShaderProgram);
 
         base.OnUnload();
 
