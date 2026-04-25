@@ -1,7 +1,9 @@
+using System.ComponentModel.Design.Serialization;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Graphical_OpenGL;
 
@@ -91,6 +93,21 @@ public class CubeDemo : GameWindow
 
     private double _time;
 
+    // ---- Camera state ----
+    private Vector3 _cameraPosition = new(2.5f, 2.5f, 2.5f);
+    private Vector3 _cameraFront = -Vector3.UnitZ;
+    private Vector3 _cameraUp = Vector3.UnitY;
+
+    private float _yaw = -135f;   // degrees, so initial front points toward origin
+    private float _pitch = -35f;  // degrees, looking down slightly toward origin
+
+    private float _moveSpeed = 3.0f;
+    private float _mouseSensitivity = 0.2f;
+
+    private bool _isRightMouseDown = false;
+    private Vector2 _lastMousePosition;
+
+    private bool _firstMove = true;
 
     public CubeDemo()
         : base(GameWindowSettings.Default,
@@ -193,17 +210,9 @@ public class CubeDemo : GameWindow
         _viewLocation = GL.GetUniformLocation(_shaderProgram, "view");
         _projectionLocation = GL.GetUniformLocation(_shaderProgram, "projection");
 
-        // Set up view and projection (these won't change per frame)
+        // Set up projection (this won't change per frame)
         GL.UseProgram(_shaderProgram);
 
-        // View matrix: camera at (2, 2, 2) looking at origin
-        var viewMatrix = Matrix4.LookAt(
-            new Vector3(2.5f, 2.5f, 2.5f),
-            Vector3.Zero,
-            Vector3.UnitY);
-        GL.UniformMatrix4(_viewLocation, false, ref viewMatrix);
-
-        // Projection matrix: perspective
         float aspectRatio = ClientSize.X / (float)ClientSize.Y;
 
         var projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(
@@ -251,9 +260,14 @@ public class CubeDemo : GameWindow
         _time += args.Time;
 
         // Model matrix: rotate around Y and X axes
-        var modelMatrix = Matrix4.CreateRotationY((float)_time) *
-                          Matrix4.CreateRotationX((float)_time * 0.5f);
+        //var modelMatrix = Matrix4.CreateRotationY((float)_time) *
+                          //Matrix4.CreateRotationX((float)_time * 0.5f);
+        var modelMatrix = Matrix4.Identity;
         GL.UniformMatrix4(_modelLocation, false, ref modelMatrix);
+
+        // Update view matrix from camera state
+        var viewMatrix = Matrix4.LookAt(_cameraPosition, _cameraPosition + _cameraFront, _cameraUp);
+        GL.UniformMatrix4(_viewLocation, false, ref viewMatrix);
 
         GL.DrawElements(PrimitiveType.Triangles, _indices.Length,
                         DrawElementsType.UnsignedInt, 0);
@@ -272,9 +286,75 @@ public class CubeDemo : GameWindow
     {
         base.OnUpdateFrame(args);
 
-        if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape))
+        if (KeyboardState.IsKeyDown(Keys.Escape))
         {
             Close();
+        }
+
+        float deltaTime = (float)args.Time;
+
+        // ---- Keyboard movement ----
+        Vector3 right = Vector3.Normalize(Vector3.Cross(_cameraFront, _cameraUp));
+
+        if (KeyboardState.IsKeyDown(Keys.W))
+            _cameraPosition += _cameraFront * _moveSpeed * deltaTime;
+        if (KeyboardState.IsKeyDown(Keys.S))
+            _cameraPosition -= _cameraFront * _moveSpeed * deltaTime;
+        if (KeyboardState.IsKeyDown(Keys.A))
+            _cameraPosition -= right * _moveSpeed * deltaTime;
+        if (KeyboardState.IsKeyDown(Keys.D))
+            _cameraPosition += right * _moveSpeed * deltaTime;
+        if (KeyboardState.IsKeyDown(Keys.Space))
+            _cameraPosition += _cameraUp * _moveSpeed * deltaTime;
+        if (KeyboardState.IsKeyDown(Keys.C))
+            _cameraPosition -= _cameraUp * _moveSpeed * deltaTime;
+
+        // ---- Mouse freelook (right-click held) ----
+        if (_isRightMouseDown)
+        {
+            Vector2 currentMouse = MouseState.Position;
+
+            if (_firstMove)
+            {
+                _lastMousePosition = currentMouse;
+                _firstMove = false;
+            }
+            else
+            {
+                float deltaX = currentMouse.X - _lastMousePosition.X;
+                float deltaY = currentMouse.Y - _lastMousePosition.Y;
+
+                _yaw += deltaX * _mouseSensitivity;
+                _pitch -= deltaY * _mouseSensitivity;
+
+                // Clamp pitch to avoid gimbal lock
+                _pitch = MathHelper.Clamp(_pitch, -89f, 89f);
+
+                _lastMousePosition = currentMouse;
+            }
+
+            UpdateCameraVectors();
+        }
+    }
+
+    protected override void OnMouseDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseDown(e);
+
+        if (e.Button == MouseButton.Right)
+        {
+            _isRightMouseDown = true;
+            _firstMove = true;
+        }
+    }
+
+    protected override void OnMouseUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseUp(e);
+
+        if (e.Button == MouseButton.Right)
+        {
+            _isRightMouseDown = false;
         }
     }
 
@@ -313,6 +393,18 @@ public class CubeDemo : GameWindow
 
         base.OnUnload();
 
+    }
+
+    private void UpdateCameraVectors()
+    {
+        // Spherical to Cartesian conversion
+        float yawRad = MathHelper.DegreesToRadians(_yaw);
+        float pitchRad = MathHelper.DegreesToRadians(_pitch);
+
+        _cameraFront.X = MathF.Cos(pitchRad) * MathF.Cos(yawRad);
+        _cameraFront.Y = MathF.Sin(pitchRad);
+        _cameraFront.Z = MathF.Cos(pitchRad) * MathF.Sin(yawRad);
+        _cameraFront = Vector3.Normalize(_cameraFront);
     }
 
     private static void CheckShaderCompilation(int shader, string type)
