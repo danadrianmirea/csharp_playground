@@ -251,6 +251,7 @@ public class CubeDemo : GameWindow
 
         // ---- Set up crosshair ----
         SetupCrosshair();
+        UpdateCameraVectors();
 
         Console.WriteLine("OpenGL Cube Demo loaded. Close the window to exit.");
 
