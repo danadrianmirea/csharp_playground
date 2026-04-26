@@ -41,40 +41,6 @@ while (!Raylib.WindowShouldClose())
         yaw -= mouseDelta.X * sensitivity;
         pitch -= mouseDelta.Y * sensitivity;
         pitch = Math.Clamp(pitch, -1.5f, 1.5f);
-
-        // Compute forward direction from yaw/pitch
-        float cp = MathF.Cos(pitch);
-        Vector3 forward = new Vector3(
-            cp * MathF.Sin(yaw),
-            MathF.Sin(pitch),
-            cp * MathF.Cos(yaw)
-        );
-        forward = Vector3.Normalize(forward);
-
-        // Compute right and up vectors
-        Vector3 worldUp = new Vector3(0, 1, 0);
-        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
-        Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
-
-        // WASD movement in local camera space
-        float moveSpeed = 0.1f;
-
-        if (Raylib.IsKeyDown(KeyboardKey.W))
-            camera.Position += forward * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.S))
-            camera.Position -= forward * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.A))
-            camera.Position -= right * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.D))
-            camera.Position += right * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.Space))
-            camera.Position += up * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.C))
-            camera.Position -= up * moveSpeed;
-
-        // Set target to look in the forward direction
-        camera.Target = camera.Position + forward;
-        camera.Up = up;
     }
     else
     {
@@ -84,6 +50,38 @@ while (!Raylib.WindowShouldClose())
             wasFreelookActive = false;
         }
     }
+
+    // Compute forward direction from yaw/pitch
+    float cp = MathF.Cos(pitch);
+    Vector3 forward = new Vector3(
+        cp * MathF.Sin(yaw),
+        MathF.Sin(pitch),
+        cp * MathF.Cos(yaw)
+    );
+    forward = Vector3.Normalize(forward);
+    // Compute right and up vectors
+    Vector3 worldUp = new Vector3(0, 1, 0);
+    Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
+    Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
+    float moveSpeed = 0.1f;
+
+    // WASD movement in local camera space
+    if (Raylib.IsKeyDown(KeyboardKey.W))
+        camera.Position += forward * moveSpeed;
+    if (Raylib.IsKeyDown(KeyboardKey.S))
+        camera.Position -= forward * moveSpeed;
+    if (Raylib.IsKeyDown(KeyboardKey.A))
+        camera.Position -= right * moveSpeed;
+    if (Raylib.IsKeyDown(KeyboardKey.D))
+        camera.Position += right * moveSpeed;
+    if (Raylib.IsKeyDown(KeyboardKey.Space))
+        camera.Position += up * moveSpeed;
+    if (Raylib.IsKeyDown(KeyboardKey.C))
+        camera.Position -= up * moveSpeed;
+
+    // Set target to look in the forward direction
+    camera.Target = camera.Position + forward;
+    camera.Up = up;
 
     Raylib.BeginDrawing();
     Raylib.ClearBackground(Color.White);
@@ -111,13 +109,11 @@ while (!Raylib.WindowShouldClose())
 
     Raylib.EndMode3D();
 
-    Raylib.DrawText("Hello Raylib! 3D Cube", 10, 10, 20, Color.DarkGray);
-    Raylib.DrawFPS(10, 40);
-
-    if (!freelookActive)
-    {
-        Raylib.DrawText("Hold right mouse button for freelook (mouse + WASD)", 10, screenHeight - 30, 15, Color.Gray);
-    }
+    int lineSpacing = 25;
+    int startDrawY = 20;
+    Raylib.DrawFPS(10, startDrawY);
+    Raylib.DrawText("Hello Raylib! 3D Cube", 10, startDrawY + lineSpacing, 20, Color.DarkGray);
+    Raylib.DrawText("Hold right mouse button for freelook (mouse + WASD)", 10, startDrawY + 2*lineSpacing, 20, Color.DarkGray);
 
     Raylib.EndDrawing();
 }
