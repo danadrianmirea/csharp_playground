@@ -1,6 +1,4 @@
-﻿using Box2DX.Common;
-using Box2DX.Dynamics;
-using Box2DX.Collision;
+﻿using Box2D;
 using static SDL2.SDL;
 
 namespace Box2DTest;
@@ -10,16 +8,12 @@ internal class Program
     private const int WindowWidth = 1280;
     private const int WindowHeight = 720;
     private const float PixelsPerMeter = 30f;
-    private const int VelocityIterations = 8;
-    private const int PositionIterations = 3;
-    private const int BallCount = 50;
+    private const int SubStepCount = 4;
+    private const int BallCount = 30;
 
     private static IntPtr _window;
     private static IntPtr _renderer;
-    private static World _world;
-    private static readonly List<Body> _balls = new();
-    private static readonly List<float> _ballRadii = new();
-    private static Body _groundBody;
+    private static World _world = null!;
     private static bool _running = true;
 
     static void Main(string[] args)
@@ -33,7 +27,7 @@ internal class Program
 
         // Create window
         _window = SDL_CreateWindow(
-            "Box2D Falling Balls",
+            "Box2D Falling Balls (Debug Draw)",
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             WindowWidth, WindowHeight,
             SDL_WindowFlags.SDL_WINDOW_SHOWN);
@@ -60,11 +54,11 @@ internal class Program
         }
 
         // Initialize Box2D world with gravity
-        // World bounds (large enough to contain our scene)
-        AABB worldAABB = new AABB();
-        worldAABB.LowerBound = new Vec2(-100, -100);
-        worldAABB.UpperBound = new Vec2(100, 100);
-        _world = new World(worldAABB, new Vec2(0, 30f), true); // gravity pointing down, doSleep = true
+        WorldDef worldDef = new WorldDef
+        {
+            Gravity = new System.Numerics.Vector2(0, 10f)
+        };
+        _world = new World(worldDef);
 
         // Create ground plane
         CreateGround();
@@ -72,7 +66,7 @@ internal class Program
         // Spawn balls
         SpawnBalls();
 
-        Console.WriteLine("Box2D Falling Balls Demo started. Close the window or press ESC to exit.");
+        Console.WriteLine("Box2D Falling Balls Demo (Debug Draw) started. Close the window or press ESC to exit.");
 
         // Main loop
         RunLoop();
@@ -83,22 +77,32 @@ internal class Program
 
     private static void CreateGround()
     {
-        BodyDef groundBodyDef = new BodyDef();
-        groundBodyDef.Position = new Vec2(WindowWidth / 2f / PixelsPerMeter, (WindowHeight - 20f) / PixelsPerMeter);
+        BodyDef groundBodyDef = new BodyDef
+        {
+            Position = new System.Numerics.Vector2(
+                WindowWidth / 2f / PixelsPerMeter,
+                (WindowHeight - 20f) / PixelsPerMeter),
+            Name = "Ground"
+        };
 
-        _groundBody = _world.CreateBody(groundBodyDef);
+        Body groundBody = _world.CreateBody(groundBodyDef);
 
         // Create ground shape (a wide rectangle)
-        PolygonDef groundShape = new PolygonDef();
-        groundShape.SetAsBox(
+        Polygon groundShape = Polygon.MakeBox(
             WindowWidth / 2f / PixelsPerMeter,  // half-width in meters
             10f / PixelsPerMeter                 // half-height in meters
         );
-        groundShape.Friction = 0.3f;
-        groundShape.Restitution = 0.1f;
-        groundShape.Density = 0f; // static bodies don't need density
 
-        _groundBody.CreateFixture(groundShape);
+        ShapeDef shapeDef = new ShapeDef
+        {
+            Material = new SurfaceMaterial
+            {
+                Friction = 0.3f,
+                Restitution = 0.1f
+            }
+        };
+
+        groundBody.CreateShape(shapeDef, groundShape);
     }
 
     private static void SpawnBalls()
@@ -107,11 +111,14 @@ internal class Program
 
         for (int i = 0; i < BallCount; i++)
         {
-            BodyDef ballBodyDef = new BodyDef();
-            ballBodyDef.Position = new Vec2(
-                (float)(random.NextDouble() * (WindowWidth - 100) + 50) / PixelsPerMeter,
-                (float)(random.NextDouble() * 200 + 50) / PixelsPerMeter
-            );
+            BodyDef ballBodyDef = new BodyDef
+            {
+                Position = new System.Numerics.Vector2(
+                    (float)(random.NextDouble() * (WindowWidth - 100) + 50) / PixelsPerMeter,
+                    (float)(random.NextDouble() * 200 + 50) / PixelsPerMeter),
+                Type = BodyType.Dynamic,
+                Name = $"Ball_{i}"
+            };
 
             Body ballBody = _world.CreateBody(ballBodyDef);
 
@@ -119,23 +126,32 @@ internal class Program
             float radiusPixels = (float)(random.NextDouble() * 12 + 8);
             float radiusMeters = radiusPixels / PixelsPerMeter;
 
-            CircleDef circleDef = new CircleDef();
-            circleDef.Radius = radiusMeters;
-            circleDef.Density = 1.0f;
-            circleDef.Friction = 0.3f;
-            circleDef.Restitution = 0.5f;
+            Circle circle = new Circle
+            {
+                Center = System.Numerics.Vector2.Zero,
+                Radius = radiusMeters
+            };
 
-            ballBody.CreateFixture(circleDef);
-            ballBody.SetMassFromShapes();
+            ShapeDef shapeDef = new ShapeDef
+            {
+                Density = 1.0f,
+                Material = new SurfaceMaterial
+                {
+                    Friction = 0.3f,
+                    Restitution = 0.5f
+                }
+            };
 
-            _balls.Add(ballBody);
-            _ballRadii.Add(radiusPixels);
+            ballBody.CreateShape(shapeDef, circle);
         }
     }
 
     private static void RunLoop()
     {
         uint lastTime = SDL_GetTicks();
+
+        // Create the debug draw instance
+        SdlDebugDraw debugDraw = new SdlDebugDraw(_renderer, PixelsPerMeter);
 
         while (_running)
         {
@@ -166,101 +182,326 @@ internal class Program
                 deltaTime = 0.05f;
 
             // Step the physics world
-            _world.Step(deltaTime, VelocityIterations, PositionIterations);
+            _world.Step(deltaTime, SubStepCount);
 
-            // Render
-            Render();
+            // Render using debug draw
+            Render(debugDraw);
         }
     }
 
-    private static void Render()
+    private static void Render(SdlDebugDraw debugDraw)
     {
         // Clear screen with dark blue background
         SDL_SetRenderDrawColor(_renderer, 30, 30, 50, 255);
         SDL_RenderClear(_renderer);
 
-        // Draw ground
-        DrawGround();
-
-        // Draw balls
-        for (int i = 0; i < _balls.Count; i++)
-        {
-            DrawBall(_balls[i], _ballRadii[i]);
-        }
+        // Use Box2D debug draw to render all objects
+        _world.Draw(debugDraw);
 
         // Present
         SDL_RenderPresent(_renderer);
     }
 
-    private static void DrawGround()
+    private static void Cleanup()
     {
-        Vec2 position = _groundBody.GetPosition();
-        float halfWidth = WindowWidth / 2f / PixelsPerMeter;
-        float halfHeight = 10f / PixelsPerMeter;
+        _world.Destroy();
+        SDL_DestroyRenderer(_renderer);
+        SDL_DestroyWindow(_window);
+        SDL_Quit();
+    }
+}
 
-        // Ground rectangle in world coordinates
-        float left = (position.X - halfWidth) * PixelsPerMeter;
-        float top = (position.Y - halfHeight) * PixelsPerMeter;
-        float right = (position.X + halfWidth) * PixelsPerMeter;
-        float bottom = (position.Y + halfHeight) * PixelsPerMeter;
+/// <summary>
+/// Custom debug draw implementation that renders Box2D shapes using SDL2.
+/// </summary>
+internal class SdlDebugDraw : DebugDrawSimpleBase
+{
+    private readonly IntPtr _renderer;
+    private readonly float _pixelsPerMeter;
 
-        SDL_Rect groundRect = new SDL_Rect
-        {
-            x = (int)left,
-            y = (int)top,
-            w = (int)(right - left),
-            h = (int)(bottom - top)
-        };
+    public SdlDebugDraw(IntPtr renderer, float pixelsPerMeter)
+    {
+        _renderer = renderer;
+        _pixelsPerMeter = pixelsPerMeter;
 
-        SDL_SetRenderDrawColor(_renderer, 100, 180, 100, 255);
-        SDL_RenderFillRect(_renderer, ref groundRect);
-
-        // Draw a line on top of the ground
-        SDL_SetRenderDrawColor(_renderer, 150, 220, 150, 255);
-        SDL_RenderDrawLine(_renderer, (int)left, (int)top, (int)right, (int)top);
+        // Enable drawing shapes
+        DrawShapes = true;
+        DrawJoints = false;
+        DrawBounds = false;
+        DrawMass = false;
+        DrawBodyNames = false;
+        DrawContacts = false;
+        DrawContactNormals = false;
+        DrawContactImpulses = false;
+        DrawFrictionImpulses = false;
+        DrawContactFeatures = false;
+        DrawIslands = false;
+        DrawGraphColors = false;
+        DrawJointExtras = false;
     }
 
-    private static void DrawBall(Body ball, float radiusPixels)
-    {
-        Vec2 position = ball.GetPosition();
-        int screenX = (int)(position.X * PixelsPerMeter);
-        int screenY = (int)(position.Y * PixelsPerMeter);
-        int radius = (int)radiusPixels;
+    private int ToScreenX(float worldX) => (int)(worldX * _pixelsPerMeter);
+    private int ToScreenY(float worldY) => (int)(worldY * _pixelsPerMeter);
 
-        DrawFilledCircle(screenX, screenY, radius);
+    private void SetColor(HexColor color)
+    {
+        byte r = color.Red();
+        byte g = color.Green();
+        byte b = color.Blue();
+        SDL_SetRenderDrawColor(_renderer, r, g, b, 255);
     }
 
-    private static void DrawFilledCircle(int centerX, int centerY, int radius)
+    protected override void DrawPolygon(ReadOnlySpan<System.Numerics.Vector2> vertices, HexColor color)
     {
-        // Draw filled circle using horizontal scanlines
-        for (int y = -radius; y <= radius; y++)
-        {
-            int xWidth = (int)System.Math.Sqrt(radius * radius - y * y);
-            int x1 = centerX - xWidth;
-            int x2 = centerX + xWidth;
+        if (vertices.Length < 2)
+            return;
 
-            SDL_SetRenderDrawColor(_renderer, 200, 80, 80, 255);
-            SDL_RenderDrawLine(_renderer, x1, centerY + y, x2, centerY + y);
-        }
+        SetColor(color);
 
-        // Draw circle outline
-        SDL_SetRenderDrawColor(_renderer, 255, 150, 150, 255);
-        for (int angle = 0; angle < 360; angle += 5)
+        for (int i = 0; i < vertices.Length; i++)
         {
-            double rad = angle * System.Math.PI / 180.0;
-            int x1 = centerX + (int)((radius - 1) * System.Math.Cos(rad));
-            int y1 = centerY + (int)((radius - 1) * System.Math.Sin(rad));
-            int x2 = centerX + (int)(radius * System.Math.Cos(rad));
-            int y2 = centerY + (int)(radius * System.Math.Sin(rad));
+            int next = (i + 1) % vertices.Length;
+            int x1 = ToScreenX(vertices[i].X);
+            int y1 = ToScreenY(vertices[i].Y);
+            int x2 = ToScreenX(vertices[next].X);
+            int y2 = ToScreenY(vertices[next].Y);
             SDL_RenderDrawLine(_renderer, x1, y1, x2, y2);
         }
     }
 
-    private static void Cleanup()
+    protected override void DrawSolidPolygon(Transform transform, ReadOnlySpan<System.Numerics.Vector2> vertices, float radius, HexColor color)
     {
-        _world.Dispose();
-        SDL_DestroyRenderer(_renderer);
-        SDL_DestroyWindow(_window);
-        SDL_Quit();
+        if (vertices.Length < 2)
+            return;
+
+        // Transform all vertices
+        System.Numerics.Vector2[] transformed = new System.Numerics.Vector2[vertices.Length];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            transformed[i] = Core.TransformPoint(transform, vertices[i]);
+        }
+
+        // Draw filled polygon
+        DrawFilledPolygon(transformed, color);
+
+        // Draw outline (slightly brighter)
+        DrawPolygon(transformed, color);
+    }
+
+    private void DrawFilledPolygon(System.Numerics.Vector2[] vertices, HexColor color)
+    {
+        if (vertices.Length < 3)
+            return;
+
+        // Find min/max y in screen coordinates
+        int minY = int.MaxValue;
+        int maxY = int.MinValue;
+        int[] screenX = new int[vertices.Length];
+        int[] screenY = new int[vertices.Length];
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            screenX[i] = ToScreenX(vertices[i].X);
+            screenY[i] = ToScreenY(vertices[i].Y);
+            if (screenY[i] < minY) minY = screenY[i];
+            if (screenY[i] > maxY) maxY = screenY[i];
+        }
+
+        SetColor(color);
+
+        // Scanline fill
+        for (int y = minY; y <= maxY; y++)
+        {
+            var intersections = new System.Collections.Generic.List<int>();
+
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                int j = (i + 1) % vertices.Length;
+                int y1 = screenY[i];
+                int y2 = screenY[j];
+
+                if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y))
+                {
+                    float t = (float)(y - y1) / (y2 - y1);
+                    int x = (int)(screenX[i] + t * (screenX[j] - screenX[i]));
+                    intersections.Add(x);
+                }
+            }
+
+            intersections.Sort();
+            for (int i = 0; i + 1 < intersections.Count; i += 2)
+            {
+                int x1 = intersections[i];
+                int x2 = intersections[i + 1];
+                SDL_RenderDrawLine(_renderer, x1, y, x2, y);
+            }
+        }
+    }
+
+    protected override void DrawCircle(System.Numerics.Vector2 center, float radius, HexColor color)
+    {
+        SetColor(color);
+        int cx = ToScreenX(center.X);
+        int cy = ToScreenY(center.Y);
+        int r = (int)(radius * _pixelsPerMeter);
+
+        DrawCircleOutline(cx, cy, r);
+    }
+
+    protected override void DrawSolidCircle(Transform transform, float radius, HexColor color)
+    {
+        System.Numerics.Vector2 center = transform.Position;
+        int cx = ToScreenX(center.X);
+        int cy = ToScreenY(center.Y);
+        int r = (int)(radius * _pixelsPerMeter);
+
+        // Draw filled circle
+        SetColor(color);
+        DrawFilledCircle(cx, cy, r);
+
+        // Draw outline
+        DrawCircleOutline(cx, cy, r);
+    }
+
+    protected override void DrawSolidCapsule(System.Numerics.Vector2 start, System.Numerics.Vector2 end, float radius, HexColor color)
+    {
+        SetColor(color);
+
+        int x1 = ToScreenX(start.X);
+        int y1 = ToScreenY(start.Y);
+        int x2 = ToScreenX(end.X);
+        int y2 = ToScreenY(end.Y);
+        int r = (int)(radius * _pixelsPerMeter);
+
+        // Draw the rectangle body
+        float dx = end.X - start.X;
+        float dy = end.Y - start.Y;
+        float len = (float)System.Math.Sqrt(dx * dx + dy * dy);
+        if (len > 0.001f)
+        {
+            float nx = -dy / len;
+            float ny = dx / len;
+
+            int ox = (int)(nx * radius * _pixelsPerMeter);
+            int oy = (int)(ny * radius * _pixelsPerMeter);
+
+            // Draw filled quad
+            SDL_Point[] points = new SDL_Point[]
+            {
+                new SDL_Point { x = x1 + ox, y = y1 + oy },
+                new SDL_Point { x = x1 - ox, y = y1 - oy },
+                new SDL_Point { x = x2 - ox, y = y2 - oy },
+                new SDL_Point { x = x2 + ox, y = y2 + oy }
+            };
+
+            // Simple filled quad via scanlines
+            int minY = System.Math.Min(System.Math.Min(points[0].y, points[1].y), System.Math.Min(points[2].y, points[3].y));
+            int maxY = System.Math.Max(System.Math.Max(points[0].y, points[1].y), System.Math.Max(points[2].y, points[3].y));
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                var intersections = new System.Collections.Generic.List<int>();
+                for (int i = 0; i < 4; i++)
+                {
+                    int j = (i + 1) % 4;
+                    int y1p = points[i].y;
+                    int y2p = points[j].y;
+                    if ((y1p <= y && y2p > y) || (y2p <= y && y1p > y))
+                    {
+                        float t = (float)(y - y1p) / (y2p - y1p);
+                        int x = (int)(points[i].x + t * (points[j].x - points[i].x));
+                        intersections.Add(x);
+                    }
+                }
+                intersections.Sort();
+                for (int i = 0; i + 1 < intersections.Count; i += 2)
+                {
+                    SDL_RenderDrawLine(_renderer, intersections[i], y, intersections[i + 1], y);
+                }
+            }
+        }
+
+        // Draw end circles
+        DrawFilledCircle(x1, y1, r);
+        DrawFilledCircle(x2, y2, r);
+    }
+
+    protected override void DrawSegment(System.Numerics.Vector2 start, System.Numerics.Vector2 end, HexColor color)
+    {
+        SetColor(color);
+        int x1 = ToScreenX(start.X);
+        int y1 = ToScreenY(start.Y);
+        int x2 = ToScreenX(end.X);
+        int y2 = ToScreenY(end.Y);
+        SDL_RenderDrawLine(_renderer, x1, y1, x2, y2);
+    }
+
+    protected override void DrawTransform(Transform transform)
+    {
+        // Draw the transform axes
+        System.Numerics.Vector2 p = transform.Position;
+        float axisLength = 0.4f;
+
+        // X axis (red)
+        System.Numerics.Vector2 right = p + new System.Numerics.Vector2(transform.Rotation.Cos, transform.Rotation.Sin) * axisLength;
+        SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255);
+        SDL_RenderDrawLine(_renderer, ToScreenX(p.X), ToScreenY(p.Y), ToScreenX(right.X), ToScreenY(right.Y));
+
+        // Y axis (green)
+        System.Numerics.Vector2 up = p + new System.Numerics.Vector2(-transform.Rotation.Sin, transform.Rotation.Cos) * axisLength;
+        SDL_SetRenderDrawColor(_renderer, 0, 255, 0, 255);
+        SDL_RenderDrawLine(_renderer, ToScreenX(p.X), ToScreenY(p.Y), ToScreenX(up.X), ToScreenY(up.Y));
+    }
+
+    protected override void DrawPoint(System.Numerics.Vector2 point, float size, HexColor color)
+    {
+        SetColor(color);
+        int px = ToScreenX(point.X);
+        int py = ToScreenY(point.Y);
+        int s = (int)(size * _pixelsPerMeter);
+        if (s < 1) s = 1;
+
+        SDL_Rect rect = new SDL_Rect
+        {
+            x = px - s / 2,
+            y = py - s / 2,
+            w = s,
+            h = s
+        };
+        SDL_RenderFillRect(_renderer, ref rect);
+    }
+
+    protected override void DrawString(System.Numerics.Vector2 point, string? text, HexColor color)
+    {
+        // SDL2 doesn't have built-in text rendering without SDL_ttf
+        // Skip string drawing for now
+    }
+
+    private void DrawCircleOutline(int cx, int cy, int r)
+    {
+        if (r <= 0) return;
+
+        for (int angle = 0; angle < 360; angle += 5)
+        {
+            double rad = angle * System.Math.PI / 180.0;
+            int x1 = cx + (int)((r - 1) * System.Math.Cos(rad));
+            int y1 = cy + (int)((r - 1) * System.Math.Sin(rad));
+            int x2 = cx + (int)(r * System.Math.Cos(rad));
+            int y2 = cy + (int)(r * System.Math.Sin(rad));
+            SDL_RenderDrawLine(_renderer, x1, y1, x2, y2);
+        }
+    }
+
+    private void DrawFilledCircle(int cx, int cy, int r)
+    {
+        if (r <= 0) return;
+
+        for (int y = -r; y <= r; y++)
+        {
+            int xWidth = (int)System.Math.Sqrt(r * r - y * y);
+            int x1 = cx - xWidth;
+            int x2 = cx + xWidth;
+            SDL_RenderDrawLine(_renderer, x1, cy + y, x2, cy + y);
+        }
     }
 }
