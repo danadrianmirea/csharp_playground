@@ -1,15 +1,24 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jitter2" Version="2.8.5" />
+    <PackageReference Include="PhysX.Net" Version="5.0.1-alpha1" />
     <PackageReference Include="Raylib-cs" Version="7.0.2" />
   </ItemGroup>
+
+  <!-- Copy native PhysX DLLs to output directory -->
+  <Target Name="CopyPhysXNatives" AfterTargets="Build">
+    <ItemGroup>
+      <PhysXNativeDlls Include="$(NuGetPackageRoot)physx.net\5.0.1-alpha1\runtimes\win-x64\native\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PhysXNativeDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

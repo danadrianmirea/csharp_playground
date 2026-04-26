@@ -1,168 +1,235 @@
-using Jitter2;
-using Jitter2.Collision.Shapes;
-using Jitter2.Dynamics;
-using Jitter2.LinearMath;
+using PhysX;
 using Raylib_cs;
 using System.Numerics;
 
-const int screenWidth = 1280;
-const int screenHeight = 720;
+namespace RaylibPhysDemo;
 
-Raylib.InitWindow(screenWidth, screenHeight, "Raylib C# - Jitter Physics: 1000 Spheres");
-Raylib.SetTargetFPS(60);
-
-// ── Camera setup ──
-Camera3D camera = new()
+class Program
 {
-    Position = new Vector3(25.0f, 20.0f, 25.0f),
-    Target = new Vector3(0.0f, 5.0f, 0.0f),
-    Up = new Vector3(0.0f, 1.0f, 0.0f),
-    FovY = 60.0f,
-    Projection = CameraProjection.Perspective
-};
+    // ── Configuration ──
+    const int GridWidth = 2;
+    const int GridLength = 2;
+    const int GridHeight = 200;
+    const int SphereCount = GridWidth * GridLength * GridHeight;
+    const float SphereRadius = 0.4f;
+    const float Spacing = 1.0f;
+    const float StartY = 25.0f;
 
-Vector3 lookDir = Vector3.Normalize(camera.Target - camera.Position);
-float yaw = MathF.Atan2(lookDir.X, lookDir.Z);
-float pitch = MathF.Asin(Math.Clamp(lookDir.Y, -1.0f, 1.0f));
-bool wasFreelookActive = false;
+    // ── PhysX state ──
+    static Foundation foundation = null!;
+    static Physics physics = null!;
+    static Scene scene = null!;
+    static PhysX.Material material = null!;
+    static RigidDynamic[] spheres = new RigidDynamic[SphereCount];
 
-// ── Jitter Physics World ──
-World physicsWorld = new();
+    // ── Camera state ──
+    static Camera3D camera;
+    static float yaw = -MathF.PI / 4;
+    static float pitch = -0.3f;
+    static bool wasFreelookActive;
 
-// Ground plane: a large static box
-RigidBody ground = physicsWorld.CreateRigidBody();
-ground.AddShape(new BoxShape(50, 1, 50));
-ground.Position = new JVector(0, -0.5f, 0);
-ground.MotionType = MotionType.Static;
-
-// ── Create 1000 spheres in a 10×10×10 grid ──
-const int gridSize = 10;
-const float spacing = 2.5f;
-const float sphereRadius = 0.4f;
-const float startY = 25.0f;
-
-RigidBody[] spheres = new RigidBody[gridSize * gridSize * gridSize];
-int idx = 0;
-
-for (int ix = 0; ix < gridSize; ix++)
-{
-    for (int iy = 0; iy < gridSize; iy++)
+    static void Main(string[] args)
     {
-        for (int iz = 0; iz < gridSize; iz++)
+        // ── Window setup ──
+        const int screenWidth = 1280;
+        const int screenHeight = 720;
+        Raylib.InitWindow(screenWidth, screenHeight, "PhysX.Net: 1000 Spheres");
+        Raylib.SetTargetFPS(60);
+
+        // ── Camera setup ──
+        camera = new Camera3D();
+        camera.Position = new Vector3(25, 15, 25);
+        camera.Target = new Vector3(0, 5, 0);
+        camera.Up = new Vector3(0, 1, 0);
+        camera.FovY = 60.0f;
+        camera.Projection = CameraProjection.Perspective;
+
+        // ── Initialize PhysX ──
+        InitPhysX();
+
+        // ── Main loop ──
+        while (!Raylib.WindowShouldClose())
         {
-            float x = (ix - (gridSize - 1) * 0.5f) * spacing;
-            float y = startY + iy * spacing;
-            float z = (iz - (gridSize - 1) * 0.5f) * spacing;
+            float dt = Raylib.GetFrameTime();
+            if (dt > 0.05f) dt = 0.05f; // Clamp to prevent spiral of death
 
-            RigidBody sphere = physicsWorld.CreateRigidBody();
-            sphere.AddShape(new SphereShape(sphereRadius));
-            sphere.Position = new JVector(x, y, z);
-            sphere.Damping = (0.01f, 0.01f); // slight damping for stability
-            sphere.Restitution = 0.3f;
-            sphere.Friction = 0.5f;
+            // ── Camera freelook ──
+            bool freelookActive = Raylib.IsMouseButtonDown(MouseButton.Right);
+            if (freelookActive)
+            {
+                if (!wasFreelookActive)
+                {
+                    Raylib.HideCursor();
+                    wasFreelookActive = true;
+                }
 
-            spheres[idx++] = sphere;
+                Vector2 mouseDelta = Raylib.GetMouseDelta();
+                float sensitivity = 0.003f;
+                yaw -= mouseDelta.X * sensitivity;
+                pitch -= mouseDelta.Y * sensitivity;
+                pitch = Math.Clamp(pitch, -1.5f, 1.5f);
+
+                float cp = MathF.Cos(pitch);
+                Vector3 forward = new(cp * MathF.Sin(yaw), MathF.Sin(pitch), cp * MathF.Cos(yaw));
+                forward = Vector3.Normalize(forward);
+
+                Vector3 worldUp = new(0, 1, 0);
+                Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
+                Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
+
+                float moveSpeed = 8.0f * dt;
+                if (Raylib.IsKeyDown(KeyboardKey.W)) camera.Position += forward * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.S)) camera.Position -= forward * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.A)) camera.Position -= right * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.D)) camera.Position += right * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.Space)) camera.Position += up * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) camera.Position -= up * moveSpeed;
+
+                camera.Target = camera.Position + forward;
+                camera.Up = up;
+            }
+            else
+            {
+                if (wasFreelookActive)
+                {
+                    Raylib.ShowCursor();
+                    wasFreelookActive = false;
+                }
+            }
+
+            // ── Step physics ──
+            scene.Simulate(dt);
+            scene.FetchResults(true);
+
+            // ── Render ──
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.SkyBlue);
+
+            Raylib.BeginMode3D(camera);
+
+            // Draw ground
+            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(50, 50), Color.Gray);
+
+            // Draw spheres
+            for (int i = 0; i < SphereCount; i++)
+            {
+                Vector3 pos = spheres[i].GlobalPosePosition;
+
+                // Color based on height: blue (low) -> red (high)
+                float t = Math.Clamp((pos.Y + 2.0f) / 30.0f, 0.0f, 1.0f);
+                Color color = new Color(
+                    (int)(t * 255),
+                    (int)((1.0f - MathF.Abs(t - 0.5f) * 2.0f) * 50),
+                    (int)((1.0f - t) * 255),
+                    255
+                );
+
+                Raylib.DrawSphere(pos, SphereRadius, color);
+            }
+
+            Raylib.DrawGrid(20, 2.0f);
+
+            Raylib.EndMode3D();
+
+            // ── UI ──
+            Raylib.DrawFPS(10, 10);
+            Raylib.DrawText($"Spheres: {SphereCount}", 10, 30, 20, Color.DarkGray);
+            if (!freelookActive)
+            {
+                Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + Shift)", 10, screenHeight - 30, 15, Color.Gray);
+            }
+
+            Raylib.EndDrawing();
+        }
+
+        // ── Cleanup ──
+        CleanupPhysX();
+        Raylib.CloseWindow();
+    }
+
+    static void InitPhysX()
+    {
+        // Create random generator for sphere position jitter
+        Random rng = new Random();
+
+        // Create foundation
+        foundation = new Foundation(new DefaultErrorCallback());
+
+        // Create physics
+        physics = new Physics(foundation, false, null!);
+
+        // Create scene descriptor with gravity
+        SceneDesc sceneDesc = new SceneDesc();
+        sceneDesc.Gravity = new Vector3(0, -9.81f, 0);
+        scene = physics.CreateScene(sceneDesc);
+
+        // Create material
+        material = physics.CreateMaterial(0.5f, 0.3f, 0.5f);
+
+        // ── Create ground plane (static body) ──
+        var ground = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
+        var groundShape = RigidActorExt.CreateExclusiveShape(
+            ground,
+            new BoxGeometry(25, 0.5f, 25),
+            material
+        );
+        scene.AddActor(ground);
+
+        // ── Create spheres ──
+        int idx = 0;
+        for (int ix = 0; ix < GridWidth; ix++)
+        {
+            for (int iy = 0; iy < GridHeight; iy++)
+            {
+                for (int iz = 0; iz < GridLength; iz++)
+                {
+                    float x = (ix - (GridWidth - 1) * 0.5f) * Spacing + (float)(rng.NextDouble() - 0.5) * 1.6f;
+                    float y = StartY + iy * Spacing + (float)(rng.NextDouble() - 0.5) * 1.6f;
+                    float z = (iz - (GridLength - 1) * 0.5f) * Spacing + (float)(rng.NextDouble() - 0.5) * 1.6f;
+
+                    var body = physics.CreateRigidDynamic(Matrix4x4.CreateTranslation(x, y, z));
+                    var shape = RigidActorExt.CreateExclusiveShape(
+                        body,
+                        new SphereGeometry(SphereRadius),
+                        material
+                    );
+
+                    body.SetMassAndUpdateInertia(1.0f);
+                    body.LinearDamping = 0.1f;
+                    body.AngularDamping = 0.1f;
+
+                    scene.AddActor(body);
+                    spheres[idx++] = body;
+                }
+            }
+        }
+    }
+
+    static void CleanupPhysX()
+    {
+        // Remove and release all actors
+        for (int i = 0; i < SphereCount; i++)
+        {
+            if (spheres[i] != null)
+            {
+                scene.RemoveActor(spheres[i]);
+                spheres[i].Dispose();
+            }
+        }
+
+        if (scene != null)
+        {
+            scene.Dispose();
+        }
+
+        if (physics != null)
+        {
+            physics.Dispose();
+        }
+
+        if (foundation != null)
+        {
+            foundation.Dispose();
         }
     }
 }
-
-// ── Main loop ──
-while (!Raylib.WindowShouldClose())
-{
-    // ── Freelook camera ──
-    bool freelookActive = Raylib.IsMouseButtonDown(MouseButton.Right);
-
-    if (freelookActive)
-    {
-        if (!wasFreelookActive)
-        {
-            Raylib.HideCursor();
-            wasFreelookActive = true;
-        }
-
-        Vector2 mouseDelta = Raylib.GetMouseDelta();
-        float sensitivity = 0.003f;
-        yaw -= mouseDelta.X * sensitivity;
-        pitch -= mouseDelta.Y * sensitivity;
-        pitch = Math.Clamp(pitch, -1.5f, 1.5f);
-
-        float cp = MathF.Cos(pitch);
-        Vector3 forward = new(
-            cp * MathF.Sin(yaw),
-            MathF.Sin(pitch),
-            cp * MathF.Cos(yaw)
-        );
-        forward = Vector3.Normalize(forward);
-
-        Vector3 worldUp = new(0, 1, 0);
-        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
-        Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
-
-        float moveSpeed = 0.1f;
-
-        if (Raylib.IsKeyDown(KeyboardKey.W))
-            camera.Position += forward * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.S))
-            camera.Position -= forward * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.A))
-            camera.Position -= right * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.D))
-            camera.Position += right * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.Space))
-            camera.Position += up * moveSpeed;
-        if (Raylib.IsKeyDown(KeyboardKey.LeftShift))
-            camera.Position -= up * moveSpeed;
-
-        camera.Target = camera.Position + forward;
-        camera.Up = up;
-    }
-    else
-    {
-        if (wasFreelookActive)
-        {
-            Raylib.ShowCursor();
-            wasFreelookActive = false;
-        }
-    }
-
-    // ── Step physics ──
-    physicsWorld.Step(1.0f / 60.0f, true);
-
-    // ── Draw ──
-    Raylib.BeginDrawing();
-    Raylib.ClearBackground(Color.SkyBlue);
-
-    Raylib.BeginMode3D(camera);
-
-    // Draw ground plane
-    Raylib.DrawCube(new Vector3(0, -0.5f, 0), 50, 1, 50, Color.DarkGray);
-    Raylib.DrawCubeWires(new Vector3(0, -0.5f, 0), 50, 1, 50, Color.Black);
-
-    // Draw all spheres
-    foreach (RigidBody sphere in spheres)
-    {
-        JVector pos = sphere.Position;
-        // Color based on height: blue (low) → red (high)
-        float t = Math.Clamp((pos.Y + 2.0f) / 30.0f, 0.0f, 1.0f);
-        Color color = new(
-            (int)(t * 255),
-            (int)((1.0f - MathF.Abs(t - 0.5f) * 2.0f) * 200),
-            (int)((1.0f - t) * 255),
-            255
-        );
-        Raylib.DrawSphere(new Vector3(pos.X, pos.Y, pos.Z), sphereRadius, color);
-    }
-
-    Raylib.DrawGrid(20, 2.0f);
-
-    Raylib.EndMode3D();
-
-    // ── UI overlay ──
-    Raylib.DrawText("Jitter Physics: 1000 Spheres", 10, 10, 24, Color.Black);
-    Raylib.DrawFPS(10, 40);
-    Raylib.DrawText("Hold right mouse button for freelook (WASD + Space/Shift)", 10, screenHeight - 30, 15, Color.Gray);
-
-    Raylib.EndDrawing();
-}
-
-Raylib.CloseWindow();
