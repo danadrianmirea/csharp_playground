@@ -69,6 +69,10 @@ class Program
             {
                 if (!wasFreelookActive)
                 {
+                    // Derive yaw/pitch from current camera view direction
+                    Vector3 dir = Vector3.Normalize(camera.Target - camera.Position);
+                    yaw = MathF.Atan2(dir.X, dir.Z);
+                    pitch = MathF.Asin(Math.Clamp(dir.Y, -1.0f, 1.0f));
                     Raylib.HideCursor();
                     wasFreelookActive = true;
                 }
@@ -88,12 +92,14 @@ class Program
                 Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
 
                 float moveSpeed = 8.0f * dt;
-                if (Raylib.IsKeyDown(KeyboardKey.W)) camera.Position += forward * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.S)) camera.Position -= forward * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.A)) camera.Position -= right * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.D)) camera.Position += right * moveSpeed;
+                float speedBoost = 2.0f;
+                if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) moveSpeed *= speedBoost;
+                if (Raylib.IsKeyDown(KeyboardKey.W))     camera.Position += forward * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.A))     camera.Position -= right * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.S))     camera.Position -= forward * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.D))     camera.Position += right * moveSpeed;
                 if (Raylib.IsKeyDown(KeyboardKey.Space)) camera.Position += up * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) camera.Position -= up * moveSpeed;
+                if (Raylib.IsKeyDown(KeyboardKey.C))     camera.Position -= up * moveSpeed;
 
                 camera.Target = camera.Position + forward;
                 camera.Up = up;
