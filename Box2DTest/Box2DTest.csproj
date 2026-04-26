@@ -8,8 +8,11 @@
   </PropertyGroup>
 
   <!-- Copy native Box2D DLL to output directory (workaround for libbox2d naming) -->
-  <Target Name="CopyNativeBox2D" AfterTargets="Build">
-    <Copy SourceFiles="$(OutDir)runtimes\win-x64\native\box2d.dll" DestinationFiles="$(OutDir)libbox2d.dll" SkipUnchangedFiles="true" />
+<Target Name="CopyNativeBox2D" AfterTargets="Build;Publish">
+    <!-- During regular build: box2d.dll is in runtimes\win-x64\native\ -->
+    <Copy SourceFiles="$(TargetDir)runtimes\win-x64\native\box2d.dll" DestinationFiles="$(TargetDir)libbox2d.dll" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)runtimes\win-x64\native\box2d.dll')" />
+    <!-- During publish: box2d.dll is copied to $(PublishDir) directly -->
+    <Copy SourceFiles="$(PublishDir)box2d.dll" DestinationFiles="$(PublishDir)libbox2d.dll" SkipUnchangedFiles="true" Condition="'$(PublishDir)' != '' And Exists('$(PublishDir)box2d.dll') And !Exists('$(PublishDir)libbox2d.dll')" />
   </Target>
 
   <ItemGroup>
