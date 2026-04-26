@@ -8,14 +8,14 @@ class Program
 {
     const int GridWidth = 1;
     const int GridLength = 1;
-    const int GridHeight = 700;
+    const int GridHeight = 800;
     const int SphereCount = GridWidth * GridLength * GridHeight;
     const float SphereRadius = 0.4f;
     const float Spacing = 1.0f;
     const float StartY = 25.0f;
     const float WorldHalfExtent = 2.5f;
     const float SecondPlaneHalfExtent = 25.0f;
-    const float WallHeight = 12.0f;
+    const float WallHeight = 10.0f;
     const float WallThickness = 0.3f;
     const float PlaneThickness = 0.3f;
 
@@ -40,6 +40,9 @@ class Program
 
     // Pre-created sphere model: mesh is uploaded to GPU VRAM once at startup
     static Model sphereModel;
+
+    // Store initial positions for reset
+    static Vector3[] initialPositions = new Vector3[SphereCount];
 
     static unsafe void Main(string[] args)
     {
@@ -110,6 +113,12 @@ class Program
             camera.Target = camera.Position + forward;
             camera.Up = up;
 
+            // Reset spheres to initial positions when R is pressed
+            if (Raylib.IsKeyPressed(KeyboardKey.R))
+            {
+                ResetSpheres();
+            }
+
             // Update physics
             scene.Simulate(dt);
             scene.FetchResults(true);
@@ -154,11 +163,16 @@ class Program
             //Raylib.DrawGrid(20, 2.0f);
             Raylib.EndMode3D();
 
-            // ── UI ──
-            Raylib.DrawFPS(10, 10);
-            Raylib.DrawText($"Spheres: {SphereCount}", 10, 30, 20, Color.DarkGray);
-            Raylib.DrawText($"Camera: ({camera.Position.X:F2}, {camera.Position.Y:F2}, {camera.Position.Z:F2})", 10, 55, 20, Color.DarkGray);
-            Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + C)", 10, 80, 20, Color.DarkGray);
+            // UI
+            int startX = 10;
+            int startY = 10;
+            int lineSpacing = 25;
+            int fontSize = 20;
+            Raylib.DrawFPS(startX, startY);
+            Raylib.DrawText($"Spheres: {SphereCount}", startX, startX + lineSpacing, fontSize, Color.DarkGray);
+            Raylib.DrawText($"Camera: ({camera.Position.X:F2}, {camera.Position.Y:F2}, {camera.Position.Z:F2})", startX, startY + 2*lineSpacing, fontSize, Color.DarkGray);
+            Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + C)", startX, startY+3*lineSpacing, fontSize, Color.DarkGray);
+            Raylib.DrawText("Press R to reset spheres to their initial positions", startX, startY+4*lineSpacing, fontSize, Color.DarkGray);
             
             Raylib.EndDrawing();
         }
@@ -249,6 +263,7 @@ class Program
 
                     scene.AddActor(body);
                     spheres[idx] = body;
+                    initialPositions[idx] = new Vector3(x, y, z);
 
                     // Assign a random unique color to each sphere
                     sphereColors[idx] = new Color(
@@ -260,6 +275,22 @@ class Program
                     idx++;
                 }
             }
+        }
+    }
+
+    static void ResetSpheres()
+    {
+        for (int i = 0; i < SphereCount; i++)
+        {
+            // Reset position to initial
+            spheres[i].GlobalPose = Matrix4x4.CreateTranslation(initialPositions[i]);
+
+            // Reset velocities
+            spheres[i].LinearVelocity = Vector3.Zero;
+            spheres[i].AngularVelocity = Vector3.Zero;
+
+            // Wake up the body so physics simulation resumes
+            spheres[i].WakeUp();
         }
     }
 
