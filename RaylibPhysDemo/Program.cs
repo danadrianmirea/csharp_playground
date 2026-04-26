@@ -28,12 +28,16 @@ class Program
     static float pitch = -0.3f;
     static bool wasFreelookActive;
 
-    static void Main(string[] args)
+    // ── GPU-optimized rendering state ──
+    // Pre-created sphere model: mesh is uploaded to GPU VRAM once at startup
+    static Model sphereModel;
+
+    static unsafe void Main(string[] args)
     {
         // ── Window setup ──
         const int screenWidth = 1280;
         const int screenHeight = 720;
-        Raylib.InitWindow(screenWidth, screenHeight, "PhysX.Net: 1000 Spheres");
+        Raylib.InitWindow(screenWidth, screenHeight, "PhysX.Net: 800 Spheres (GPU Mesh)");
         Raylib.SetTargetFPS(60);
 
         // ── Camera setup ──
@@ -44,6 +48,12 @@ class Program
         camera.FovY = 60.0f;
         camera.Projection = CameraProjection.Perspective;
 
+        // ── Pre-create sphere model (GPU-resident mesh) ──
+        // GenMeshSphere creates geometry once; LoadModelFromMesh uploads it to GPU VRAM
+        // This is the key optimization: the mesh data stays on the GPU, not regenerated per frame
+        Mesh sphereMesh = Raylib.GenMeshSphere(SphereRadius, 16, 16);
+        sphereModel = Raylib.LoadModelFromMesh(sphereMesh);
+
         // ── Initialize PhysX ──
         InitPhysX();
 
@@ -51,7 +61,7 @@ class Program
         while (!Raylib.WindowShouldClose())
         {
             float dt = Raylib.GetFrameTime();
-            if (dt > 0.05f) dt = 0.05f; // Clamp to prevent spiral of death
+            if (dt > 0.05f) dt = 0.05f;
 
             // ── Camera freelook ──
             bool freelookActive = Raylib.IsMouseButtonDown(MouseButton.Right);
@@ -110,7 +120,9 @@ class Program
             // Draw ground
             Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(50, 50), Color.Gray);
 
-            // Draw spheres
+            // ── Draw spheres using the pre-created GPU model ──
+            // DrawModel reuses the GPU-resident mesh and only updates the transform.
+            // This is MUCH faster than DrawSphere which regenerates geometry every call.
             for (int i = 0; i < SphereCount; i++)
             {
                 Vector3 pos = spheres[i].GlobalPosePosition;
@@ -124,7 +136,8 @@ class Program
                     255
                 );
 
-                Raylib.DrawSphere(pos, SphereRadius, color);
+                // Draw using the GPU-resident model at the sphere's position with per-sphere tint
+                Raylib.DrawModelEx(sphereModel, pos, Vector3.UnitY, 0f, Vector3.One, color);
             }
 
             Raylib.DrawGrid(20, 2.0f);
@@ -143,30 +156,25 @@ class Program
         }
 
         // ── Cleanup ──
+        Raylib.UnloadModel(sphereModel);
         CleanupPhysX();
         Raylib.CloseWindow();
     }
 
     static void InitPhysX()
     {
-        // Create random generator for sphere position jitter
         Random rng = new Random();
 
-        // Create foundation
         foundation = new Foundation(new DefaultErrorCallback());
-
-        // Create physics
         physics = new Physics(foundation, false, null!);
 
-        // Create scene descriptor with gravity
         SceneDesc sceneDesc = new SceneDesc();
         sceneDesc.Gravity = new Vector3(0, -9.81f, 0);
         scene = physics.CreateScene(sceneDesc);
 
-        // Create material
         material = physics.CreateMaterial(0.5f, 0.3f, 0.5f);
 
-        // ── Create ground plane (static body) ──
+        // ── Create ground plane ──
         var ground = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
         var groundShape = RigidActorExt.CreateExclusiveShape(
             ground,
@@ -207,7 +215,6 @@ class Program
 
     static void CleanupPhysX()
     {
-        // Remove and release all actors
         for (int i = 0; i < SphereCount; i++)
         {
             if (spheres[i] != null)
@@ -217,19 +224,8 @@ class Program
             }
         }
 
-        if (scene != null)
-        {
-            scene.Dispose();
-        }
-
-        if (physics != null)
-        {
-            physics.Dispose();
-        }
-
-        if (foundation != null)
-        {
-            foundation.Dispose();
-        }
+        scene?.Dispose();
+        physics?.Dispose();
+        foundation?.Dispose();
     }
 }
