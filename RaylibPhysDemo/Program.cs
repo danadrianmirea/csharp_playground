@@ -7,9 +7,9 @@ namespace RaylibPhysDemo;
 class Program
 {
     // ── Configuration ──
-    const int GridWidth = 2;
-    const int GridLength = 2;
-    const int GridHeight = 200;
+    const int GridWidth = 1;
+    const int GridLength = 1;
+    const int GridHeight = 2000;
     const int SphereCount = GridWidth * GridLength * GridHeight;
     const float SphereRadius = 0.4f;
     const float Spacing = 1.0f;
@@ -93,6 +93,7 @@ class Program
 
                 float moveSpeed = 8.0f * dt;
                 float speedBoost = 2.0f;
+
                 if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) moveSpeed *= speedBoost;
                 if (Raylib.IsKeyDown(KeyboardKey.W))     camera.Position += forward * moveSpeed;
                 if (Raylib.IsKeyDown(KeyboardKey.A))     camera.Position -= right * moveSpeed;
@@ -178,7 +179,7 @@ class Program
         sceneDesc.Gravity = new Vector3(0, -9.81f, 0);
         scene = physics.CreateScene(sceneDesc);
 
-        material = physics.CreateMaterial(0.5f, 0.3f, 0.5f);
+        material = physics.CreateMaterial(0.5f, 0.3f, 0.15f);
 
         // ── Create ground plane ──
         var ground = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
