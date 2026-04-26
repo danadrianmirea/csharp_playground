@@ -6,7 +6,6 @@ namespace RaylibPhysDemo;
 
 class Program
 {
-    // ── Configuration ──
     const int GridWidth = 1;
     const int GridLength = 1;
     const int GridHeight = 700;
@@ -20,7 +19,7 @@ class Program
     const float WallThickness = 0.3f;
     const float PlaneThickness = 0.3f;
 
-    // ── PhysX state ──
+    // PhysX variables
     static Foundation foundation = null!;
     static Physics physics = null!;
     static Scene scene = null!;
@@ -31,28 +30,25 @@ class Program
     static RigidStatic wallPosZ = null!;
     static RigidStatic wallNegZ = null!;
 
-    // ── Camera state ──
+    // Camera
     static Camera3D camera;
     static float yaw = -MathF.PI / 4;
     static float pitch = -0.3f;
     static bool wasFreelookActive;
 
-    // ── Per-sphere colors ──
+    // Per-sphere colors 
     static Color[] sphereColors = new Color[SphereCount];
 
-    // ── GPU-optimized rendering state ──
     // Pre-created sphere model: mesh is uploaded to GPU VRAM once at startup
     static Model sphereModel;
 
     static unsafe void Main(string[] args)
     {
-        // ── Window setup ──
         const int screenWidth = 1280;
         const int screenHeight = 720;
         Raylib.InitWindow(screenWidth, screenHeight, "PhysX.Net: 800 Spheres (GPU Mesh)");
         Raylib.SetTargetFPS(60);
 
-        // ── Camera setup ──
         camera = new Camera3D();
         camera.Position = new Vector3(20, 25, 20);
         camera.Target = new Vector3(0, 6, 0);
@@ -60,28 +56,24 @@ class Program
         camera.FovY = 60.0f;
         camera.Projection = CameraProjection.Perspective;
 
-        // ── Pre-create sphere model (GPU-resident mesh) ──
+        // Pre-create sphere model (GPU-resident mesh)
         // GenMeshSphere creates geometry once; LoadModelFromMesh uploads it to GPU VRAM
-        // This is the key optimization: the mesh data stays on the GPU, not regenerated per frame
         Mesh sphereMesh = Raylib.GenMeshSphere(SphereRadius, 16, 16);
         sphereModel = Raylib.LoadModelFromMesh(sphereMesh);
 
-        // ── Initialize PhysX ──
+        // Initialize PhysX
         InitPhysX();
 
-        // ── Main loop ──
         while (!Raylib.WindowShouldClose())
         {
             float dt = Raylib.GetFrameTime();
             if (dt > 0.05f) dt = 0.05f;
 
-            // ── Camera freelook ──
             bool freelookActive = Raylib.IsMouseButtonDown(MouseButton.Right);
             if (freelookActive)
             {
                 if (!wasFreelookActive)
                 {
-                    // Derive yaw/pitch from current camera view direction
                     Vector3 dir = Vector3.Normalize(camera.Target - camera.Position);
                     yaw = MathF.Atan2(dir.X, dir.Z);
                     pitch = MathF.Asin(Math.Clamp(dir.Y, -1.0f, 1.0f));
@@ -126,16 +118,14 @@ class Program
                 }
             }
 
-            // ── Step physics ──
+            // Update physics
             scene.Simulate(dt);
             scene.FetchResults(true);
 
-            // ── Render ──
+            // Render
             Raylib.BeginDrawing();
             Raylib.ClearBackground(Color.Black);
-
             Raylib.BeginMode3D(camera);
-
 
             // Draw walls (semi-transparent glass)
             Color wallColor = new Color(150, 180, 220, 60);
@@ -158,7 +148,7 @@ class Program
             float groundSize2 = SecondPlaneHalfExtent * 2;
             Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize2, groundSize2), Color.DarkGreen);
 
-            // ── Draw spheres using the pre-created GPU model ──
+            // Draw spheres using the pre-created GPU model
             // DrawModel reuses the GPU-resident mesh and only updates the transform.
             // This is MUCH faster than DrawSphere which regenerates geometry every call.
             for (int i = 0; i < SphereCount; i++)
@@ -170,7 +160,6 @@ class Program
             }
 
             //Raylib.DrawGrid(20, 2.0f);
-
             Raylib.EndMode3D();
 
             // ── UI ──
@@ -182,7 +171,7 @@ class Program
             Raylib.EndDrawing();
         }
 
-        // ── Cleanup ──
+        // Cleanup
         Raylib.UnloadModel(sphereModel);
         CleanupPhysX();
         Raylib.CloseWindow();
@@ -201,7 +190,7 @@ class Program
 
         material = physics.CreateMaterial(0.5f, 0.3f, 0.15f);
 
-        // ── Create ground plane ──
+        // Create ground plane
         var ground = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
         var groundShape = RigidActorExt.CreateExclusiveShape(
             ground,
@@ -219,8 +208,7 @@ class Program
         );
         scene.AddActor(ground2);
 
-
-        // ── Create lateral walls ──
+        // Create lateral walls
         float wallHalfHeight = WallHeight * 0.5f;
         float wallY = wallHalfHeight - 0.5f;
 
@@ -244,7 +232,7 @@ class Program
         RigidActorExt.CreateExclusiveShape(wallNegZ, new BoxGeometry(WorldHalfExtent, wallHalfHeight, WallThickness), material);
         scene.AddActor(wallNegZ);
 
-        // ── Create spheres ──
+        // Create spheres
         int idx = 0;
         for (int ix = 0; ix < GridWidth; ix++)
         {
@@ -277,7 +265,6 @@ class Program
                         (int)(rng.NextDouble() * 256),
                         255
                     );
-
                     idx++;
                 }
             }
