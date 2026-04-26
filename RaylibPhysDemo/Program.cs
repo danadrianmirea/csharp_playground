@@ -9,15 +9,15 @@ class Program
     // ── Configuration ──
     const int GridWidth = 1;
     const int GridLength = 1;
-    const int GridHeight = 2000;
+    const int GridHeight = 1000;
     const int SphereCount = GridWidth * GridLength * GridHeight;
     const float SphereRadius = 0.4f;
     const float Spacing = 1.0f;
     const float StartY = 25.0f;
-    const float WorldHalfExtent = 5.0f;
-    const float WallHeight = 16.0f;
-    const float WallThickness = 0.5f;
-    const float PlaneThickness = 1.5f;
+    const float WorldHalfExtent = 2.5f;
+    const float WallHeight = 12.0f;
+    const float WallThickness = 0.3f;
+    const float PlaneThickness = 2.5f;
 
     // ── PhysX state ──
     static Foundation foundation = null!;
@@ -36,6 +36,9 @@ class Program
     static float pitch = -0.3f;
     static bool wasFreelookActive;
 
+    // ── Per-sphere colors ──
+    static Color[] sphereColors = new Color[SphereCount];
+
     // ── GPU-optimized rendering state ──
     // Pre-created sphere model: mesh is uploaded to GPU VRAM once at startup
     static Model sphereModel;
@@ -50,8 +53,8 @@ class Program
 
         // ── Camera setup ──
         camera = new Camera3D();
-        camera.Position = new Vector3(10, 30, 10);
-        camera.Target = new Vector3(0, 15, 0);
+        camera.Position = new Vector3(16, 25, 16);
+        camera.Target = new Vector3(0, 6, 0);
         camera.Up = new Vector3(0, 1, 0);
         camera.FovY = 60.0f;
         camera.Projection = CameraProjection.Perspective;
@@ -128,7 +131,7 @@ class Program
 
             // ── Render ──
             Raylib.BeginDrawing();
-            Raylib.ClearBackground(Color.SkyBlue);
+            Raylib.ClearBackground(Color.Black);
 
             Raylib.BeginMode3D(camera);
 
@@ -136,18 +139,18 @@ class Program
             float groundSize = WorldHalfExtent * 2;
             Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize, groundSize), Color.Gray);
 
-            // Draw walls
-            Color wallColor = new Color(100, 100, 120, 255);
+            // Draw walls (semi-transparent glass)
+            Color wallColor = new Color(150, 180, 220, 60);
             float wallDrawWidth = WallThickness * 2;
             float wallDrawLength = WorldHalfExtent * 2;
             Raylib.DrawCube(wallPosX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, wallColor);
             Raylib.DrawCube(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, wallColor);
             Raylib.DrawCube(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, wallColor);
             Raylib.DrawCube(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, wallColor);
-            Raylib.DrawCubeWires(wallPosX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, Color.DarkGray);
-            Raylib.DrawCubeWires(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, Color.DarkGray);
-            Raylib.DrawCubeWires(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, Color.DarkGray);
-            Raylib.DrawCubeWires(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, Color.DarkGray);
+            Raylib.DrawCubeWires(wallPosX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, new Color(200, 220, 255, 120));
+            Raylib.DrawCubeWires(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, new Color(200, 220, 255, 120));
+            Raylib.DrawCubeWires(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, new Color(200, 220, 255, 120));
+            Raylib.DrawCubeWires(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, new Color(200, 220, 255, 120));
 
             // ── Draw spheres using the pre-created GPU model ──
             // DrawModel reuses the GPU-resident mesh and only updates the transform.
@@ -156,26 +159,18 @@ class Program
             {
                 Vector3 pos = spheres[i].GlobalPosePosition;
 
-                // Color based on height: blue (low) -> red (high)
-                float t = Math.Clamp((pos.Y + 2.0f) / 30.0f, 0.0f, 1.0f);
-                Color color = new Color(
-                    (int)(t * 255),
-                    (int)((1.0f - MathF.Abs(t - 0.5f) * 2.0f) * 50),
-                    (int)((1.0f - t) * 255),
-                    255
-                );
-
                 // Draw using the GPU-resident model at the sphere's position with per-sphere tint
-                Raylib.DrawModelEx(sphereModel, pos, Vector3.UnitY, 0f, Vector3.One, color);
+                Raylib.DrawModelEx(sphereModel, pos, Vector3.UnitY, 0f, Vector3.One, sphereColors[i]);
             }
 
-            Raylib.DrawGrid(20, 2.0f);
+            //Raylib.DrawGrid(20, 2.0f);
 
             Raylib.EndMode3D();
 
             // ── UI ──
             Raylib.DrawFPS(10, 10);
             Raylib.DrawText($"Spheres: {SphereCount}", 10, 30, 20, Color.DarkGray);
+            Raylib.DrawText($"Camera: ({camera.Position.X:F2}, {camera.Position.Y:F2}, {camera.Position.Z:F2})", 10, 55, 20, Color.DarkGray);
             if (!freelookActive)
             {
                 Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + Shift)", 10, screenHeight - 30, 15, Color.Gray);
@@ -260,7 +255,17 @@ class Program
                     body.AngularDamping = 0.1f;
 
                     scene.AddActor(body);
-                    spheres[idx++] = body;
+                    spheres[idx] = body;
+
+                    // Assign a random unique color to each sphere
+                    sphereColors[idx] = new Color(
+                        (int)(rng.NextDouble() * 256),
+                        (int)(rng.NextDouble() * 256),
+                        (int)(rng.NextDouble() * 256),
+                        255
+                    );
+
+                    idx++;
                 }
             }
         }
