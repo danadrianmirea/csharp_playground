@@ -14,10 +14,11 @@ camera.FovY = 45.0f;
 camera.Projection = CameraProjection.Perspective;
 
 Raylib.SetTargetFPS(60);
+Raylib.DisableCursor();
 
 while (!Raylib.WindowShouldClose())
 {
-    Raylib.UpdateCamera(ref camera, CameraMode.Orbital);
+    Raylib.UpdateCamera(ref camera, CameraMode.Free);
 
     Raylib.BeginDrawing();
     Raylib.ClearBackground(Color.White);
