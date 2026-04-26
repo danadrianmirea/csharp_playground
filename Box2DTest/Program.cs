@@ -7,12 +7,12 @@ namespace Box2DTest;
 
 internal class Program
 {
-    private const int WindowWidth = 1024;
-    private const int WindowHeight = 768;
+    private const int WindowWidth = 1280;
+    private const int WindowHeight = 720;
     private const float PixelsPerMeter = 30f;
     private const int VelocityIterations = 8;
     private const int PositionIterations = 3;
-    private const int BallCount = 20;
+    private const int BallCount = 50;
 
     private static IntPtr _window;
     private static IntPtr _renderer;
@@ -64,7 +64,7 @@ internal class Program
         AABB worldAABB = new AABB();
         worldAABB.LowerBound = new Vec2(-100, -100);
         worldAABB.UpperBound = new Vec2(100, 100);
-        _world = new World(worldAABB, new Vec2(0, 10f), true); // gravity pointing down, doSleep = true
+        _world = new World(worldAABB, new Vec2(0, 30f), true); // gravity pointing down, doSleep = true
 
         // Create ground plane
         CreateGround();
