@@ -14,6 +14,10 @@ class Program
     const float SphereRadius = 0.4f;
     const float Spacing = 1.0f;
     const float StartY = 25.0f;
+    const float WorldHalfExtent = 5.0f;
+    const float WallHeight = 16.0f;
+    const float WallThickness = 0.5f;
+    const float PlaneThickness = 1.5f;
 
     // ── PhysX state ──
     static Foundation foundation = null!;
@@ -21,6 +25,10 @@ class Program
     static Scene scene = null!;
     static PhysX.Material material = null!;
     static RigidDynamic[] spheres = new RigidDynamic[SphereCount];
+    static RigidStatic wallPosX = null!;
+    static RigidStatic wallNegX = null!;
+    static RigidStatic wallPosZ = null!;
+    static RigidStatic wallNegZ = null!;
 
     // ── Camera state ──
     static Camera3D camera;
@@ -42,8 +50,8 @@ class Program
 
         // ── Camera setup ──
         camera = new Camera3D();
-        camera.Position = new Vector3(25, 15, 25);
-        camera.Target = new Vector3(0, 5, 0);
+        camera.Position = new Vector3(10, 30, 10);
+        camera.Target = new Vector3(0, 15, 0);
         camera.Up = new Vector3(0, 1, 0);
         camera.FovY = 60.0f;
         camera.Projection = CameraProjection.Perspective;
@@ -125,7 +133,21 @@ class Program
             Raylib.BeginMode3D(camera);
 
             // Draw ground
-            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(50, 50), Color.Gray);
+            float groundSize = WorldHalfExtent * 2;
+            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize, groundSize), Color.Gray);
+
+            // Draw walls
+            Color wallColor = new Color(100, 100, 120, 255);
+            float wallDrawWidth = WallThickness * 2;
+            float wallDrawLength = WorldHalfExtent * 2;
+            Raylib.DrawCube(wallPosX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, wallColor);
+            Raylib.DrawCube(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, wallColor);
+            Raylib.DrawCube(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, wallColor);
+            Raylib.DrawCube(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, wallColor);
+            Raylib.DrawCubeWires(wallPosX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, Color.DarkGray);
+            Raylib.DrawCubeWires(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, Color.DarkGray);
+            Raylib.DrawCubeWires(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, Color.DarkGray);
+            Raylib.DrawCubeWires(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, Color.DarkGray);
 
             // ── Draw spheres using the pre-created GPU model ──
             // DrawModel reuses the GPU-resident mesh and only updates the transform.
@@ -185,10 +207,34 @@ class Program
         var ground = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
         var groundShape = RigidActorExt.CreateExclusiveShape(
             ground,
-            new BoxGeometry(25, 0.5f, 25),
+            new BoxGeometry(WorldHalfExtent, PlaneThickness, WorldHalfExtent),
             material
         );
         scene.AddActor(ground);
+
+        // ── Create lateral walls ──
+        float wallHalfHeight = WallHeight * 0.5f;
+        float wallY = wallHalfHeight - 0.5f;
+
+        // +X wall
+        wallPosX = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(WorldHalfExtent + WallThickness, wallY, 0));
+        RigidActorExt.CreateExclusiveShape(wallPosX, new BoxGeometry(WallThickness, wallHalfHeight, WorldHalfExtent), material);
+        scene.AddActor(wallPosX);
+
+        // -X wall
+        wallNegX = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(-(WorldHalfExtent + WallThickness), wallY, 0));
+        RigidActorExt.CreateExclusiveShape(wallNegX, new BoxGeometry(WallThickness, wallHalfHeight, WorldHalfExtent), material);
+        scene.AddActor(wallNegX);
+
+        // +Z wall
+        wallPosZ = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, wallY, WorldHalfExtent + WallThickness));
+        RigidActorExt.CreateExclusiveShape(wallPosZ, new BoxGeometry(WorldHalfExtent, wallHalfHeight, WallThickness), material);
+        scene.AddActor(wallPosZ);
+
+        // -Z wall
+        wallNegZ = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, wallY, -(WorldHalfExtent + WallThickness)));
+        RigidActorExt.CreateExclusiveShape(wallNegZ, new BoxGeometry(WorldHalfExtent, wallHalfHeight, WallThickness), material);
+        scene.AddActor(wallNegZ);
 
         // ── Create spheres ──
         int idx = 0;
