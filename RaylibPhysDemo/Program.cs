@@ -9,15 +9,16 @@ class Program
     // ── Configuration ──
     const int GridWidth = 1;
     const int GridLength = 1;
-    const int GridHeight = 1000;
+    const int GridHeight = 700;
     const int SphereCount = GridWidth * GridLength * GridHeight;
     const float SphereRadius = 0.4f;
     const float Spacing = 1.0f;
     const float StartY = 25.0f;
     const float WorldHalfExtent = 2.5f;
+    const float SecondPlaneHalfExtent = 25.0f;
     const float WallHeight = 12.0f;
     const float WallThickness = 0.3f;
-    const float PlaneThickness = 2.5f;
+    const float PlaneThickness = 0.3f;
 
     // ── PhysX state ──
     static Foundation foundation = null!;
@@ -53,7 +54,7 @@ class Program
 
         // ── Camera setup ──
         camera = new Camera3D();
-        camera.Position = new Vector3(16, 25, 16);
+        camera.Position = new Vector3(20, 25, 20);
         camera.Target = new Vector3(0, 6, 0);
         camera.Up = new Vector3(0, 1, 0);
         camera.FovY = 60.0f;
@@ -135,9 +136,6 @@ class Program
 
             Raylib.BeginMode3D(camera);
 
-            // Draw ground
-            float groundSize = WorldHalfExtent * 2;
-            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize, groundSize), Color.Gray);
 
             // Draw walls (semi-transparent glass)
             Color wallColor = new Color(150, 180, 220, 60);
@@ -151,6 +149,14 @@ class Program
             Raylib.DrawCubeWires(wallNegX.GlobalPosePosition, wallDrawWidth, WallHeight, wallDrawLength, new Color(200, 220, 255, 120));
             Raylib.DrawCubeWires(wallPosZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, new Color(200, 220, 255, 120));
             Raylib.DrawCubeWires(wallNegZ.GlobalPosePosition, wallDrawLength, WallHeight, wallDrawWidth, new Color(200, 220, 255, 120));
+
+            // Draw ground
+            float groundSize = WorldHalfExtent * 2;
+            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize, groundSize), wallColor);
+
+            // Draw ground 2 
+            float groundSize2 = SecondPlaneHalfExtent * 2;
+            Raylib.DrawPlane(new Vector3(0, 0, 0), new Vector2(groundSize2, groundSize2), Color.DarkGreen);
 
             // ── Draw spheres using the pre-created GPU model ──
             // DrawModel reuses the GPU-resident mesh and only updates the transform.
@@ -171,11 +177,8 @@ class Program
             Raylib.DrawFPS(10, 10);
             Raylib.DrawText($"Spheres: {SphereCount}", 10, 30, 20, Color.DarkGray);
             Raylib.DrawText($"Camera: ({camera.Position.X:F2}, {camera.Position.Y:F2}, {camera.Position.Z:F2})", 10, 55, 20, Color.DarkGray);
-            if (!freelookActive)
-            {
-                Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + Shift)", 10, screenHeight - 30, 15, Color.Gray);
-            }
-
+            Raylib.DrawText("Hold right mouse button for freelook (WASD + Space + C)", 10, 80, 20, Color.DarkGray);
+            
             Raylib.EndDrawing();
         }
 
@@ -206,6 +209,16 @@ class Program
             material
         );
         scene.AddActor(ground);
+
+        // Create second ground plane
+        var ground2 = physics.CreateRigidStatic(Matrix4x4.CreateTranslation(0, -0.5f, 0));
+        var groundShape2 = RigidActorExt.CreateExclusiveShape(
+            ground2,
+            new BoxGeometry(SecondPlaneHalfExtent, PlaneThickness, SecondPlaneHalfExtent),
+            material
+        );
+        scene.AddActor(ground2);
+
 
         // ── Create lateral walls ──
         float wallHalfHeight = WallHeight * 0.5f;
