@@ -34,7 +34,6 @@ class Program
     static Camera3D camera;
     static float yaw = -MathF.PI / 4;
     static float pitch = -0.3f;
-    static bool wasFreelookActive;
 
     // Per-sphere colors 
     static Color[] sphereColors = new Color[SphereCount];
@@ -56,6 +55,11 @@ class Program
         camera.FovY = 60.0f;
         camera.Projection = CameraProjection.Perspective;
 
+        Vector3 dir = Vector3.Normalize(camera.Target - camera.Position);
+        yaw = MathF.Atan2(dir.X, dir.Z);
+        pitch = MathF.Asin(Math.Clamp(dir.Y, -1.0f, 1.0f));
+
+
         // Pre-create sphere model (GPU-resident mesh)
         // GenMeshSphere creates geometry once; LoadModelFromMesh uploads it to GPU VRAM
         Mesh sphereMesh = Raylib.GenMeshSphere(SphereRadius, 16, 16);
@@ -72,51 +76,39 @@ class Program
             bool freelookActive = Raylib.IsMouseButtonDown(MouseButton.Right);
             if (freelookActive)
             {
-                if (!wasFreelookActive)
-                {
-                    Vector3 dir = Vector3.Normalize(camera.Target - camera.Position);
-                    yaw = MathF.Atan2(dir.X, dir.Z);
-                    pitch = MathF.Asin(Math.Clamp(dir.Y, -1.0f, 1.0f));
-                    Raylib.HideCursor();
-                    wasFreelookActive = true;
-                }
-
+                Raylib.HideCursor();
                 Vector2 mouseDelta = Raylib.GetMouseDelta();
                 float sensitivity = 0.003f;
                 yaw -= mouseDelta.X * sensitivity;
                 pitch -= mouseDelta.Y * sensitivity;
                 pitch = Math.Clamp(pitch, -1.5f, 1.5f);
-
-                float cp = MathF.Cos(pitch);
-                Vector3 forward = new(cp * MathF.Sin(yaw), MathF.Sin(pitch), cp * MathF.Cos(yaw));
-                forward = Vector3.Normalize(forward);
-
-                Vector3 worldUp = new(0, 1, 0);
-                Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
-                Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
-
-                float moveSpeed = 8.0f * dt;
-                float speedBoost = 2.0f;
-
-                if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) moveSpeed *= speedBoost;
-                if (Raylib.IsKeyDown(KeyboardKey.W))     camera.Position += forward * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.A))     camera.Position -= right * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.S))     camera.Position -= forward * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.D))     camera.Position += right * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.Space)) camera.Position += up * moveSpeed;
-                if (Raylib.IsKeyDown(KeyboardKey.C))     camera.Position -= up * moveSpeed;
-
-                camera.Target = camera.Position + forward;
-                camera.Up = up;
             }
             else
             {
-                if (wasFreelookActive)
-                {
-                    Raylib.ShowCursor();
-                    wasFreelookActive = false;
-                }
+                Raylib.ShowCursor();
             }
+
+            float cp = MathF.Cos(pitch);
+            Vector3 forward = new(cp * MathF.Sin(yaw), MathF.Sin(pitch), cp * MathF.Cos(yaw));
+            forward = Vector3.Normalize(forward);
+
+            Vector3 worldUp = new(0, 1, 0);
+            Vector3 right = Vector3.Normalize(Vector3.Cross(forward, worldUp));
+            Vector3 up = Vector3.Normalize(Vector3.Cross(right, forward));
+
+            float moveSpeed = 8.0f * dt;
+            float speedBoost = 2.0f;
+
+            if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) moveSpeed *= speedBoost;
+            if (Raylib.IsKeyDown(KeyboardKey.W))     camera.Position += forward * moveSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.A))     camera.Position -= right * moveSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.S))     camera.Position -= forward * moveSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.D))     camera.Position += right * moveSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.Space)) camera.Position += up * moveSpeed;
+            if (Raylib.IsKeyDown(KeyboardKey.C))     camera.Position -= up * moveSpeed;
+
+            camera.Target = camera.Position + forward;
+            camera.Up = up;
 
             // Update physics
             scene.Simulate(dt);
