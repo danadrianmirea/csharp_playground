@@ -90,8 +90,22 @@ while (!Raylib.WindowShouldClose())
 
     Raylib.BeginMode3D(camera);
 
-    Raylib.DrawCube(new Vector3(0.0f, 0.0f, 0.0f), 2.0f, 2.0f, 2.0f, Color.Red);
-    Raylib.DrawCubeWires(new Vector3(0.0f, 0.0f, 0.0f), 2.0f, 2.0f, 2.0f, Color.Maroon);
+    // Draw each face of the cube with a different color
+    float s = 1.0f; // half-size
+    // Front (Z+)
+    Raylib.DrawCubeV(new Vector3(0, 0, s), new Vector3(2, 2, 0), Color.Red);
+    // Back (Z-)
+    Raylib.DrawCubeV(new Vector3(0, 0, -s), new Vector3(2, 2, 0), Color.Green);
+    // Top (Y+)
+    Raylib.DrawCubeV(new Vector3(0, s, 0), new Vector3(2, 0, 2), Color.Blue);
+    // Bottom (Y-)
+    Raylib.DrawCubeV(new Vector3(0, -s, 0), new Vector3(2, 0, 2), Color.Yellow);
+    // Right (X+)
+    Raylib.DrawCubeV(new Vector3(s, 0, 0), new Vector3(0, 2, 2), Color.Orange);
+    // Left (X-)
+    Raylib.DrawCubeV(new Vector3(-s, 0, 0), new Vector3(0, 2, 2), Color.Purple);
+
+    Raylib.DrawCubeWires(new Vector3(0.0f, 0.0f, 0.0f), 2.0f, 2.0f, 2.0f, Color.Black);
 
     Raylib.DrawGrid(10, 1.0f);
 
