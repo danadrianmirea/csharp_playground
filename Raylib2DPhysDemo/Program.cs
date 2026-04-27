@@ -12,15 +12,15 @@ class Program
 {
     const int ScreenWidth = 800;
     const int ScreenHeight = 600;
-    const int SphereCount = 2000;
+    const int SphereCount = 1000;
     const float SphereRadius = 6.0f;
-    const int numColumns = 20;
+    static int numColumns = 20;
     const float SphereSpacingX = 2.1f;
     const float SphereSpacingY = 2.1f;    
     const float Gravity = 980.0f;
     const float GroundY = ScreenHeight - 50;
-    const float Restitution = 0.9f;
-    const float Friction = 0.0f;
+    static float Restitution = 0.9f;
+    static float Friction = 0.0f;
 
     // Spatial grid
     const float CellSize = SphereRadius * 4;
@@ -93,7 +93,8 @@ class Program
             Raylib.DrawFPS(10, sy);
             Raylib.DrawText($"Spheres: {SphereCount}", 10, sy + ls, 20, Color.LightGray);
             Raylib.DrawText($"Physics: {physicsTime:F1}ms  Render: {renderTime:F1}ms", 10, sy + 2 * ls, 20, Color.LightGray);
-            Raylib.DrawText("Press R to reset", 10, sy + 3 * ls, 20, Color.LightGray);
+            Raylib.DrawText($"Restitution: {Restitution:F2}  Friction: {Friction:F2}  Cols: {numColumns}", 10, sy + 3 * ls, 20, Color.LightGray);
+            Raylib.DrawText("Press R to reset", 10, sy + 4 * ls, 20, Color.LightGray);
 
             Raylib.EndDrawing();
             renderTime = sw.Elapsed.TotalMilliseconds;
@@ -129,8 +130,17 @@ class Program
         Raylib.UnloadImage(highlightImg);
     }
 
+    static void RandomizeParams()
+    {
+        numColumns = rng.Next(4, 31);
+        Restitution = 0.1f + (float)rng.NextDouble() * 0.8f;
+        Friction = (float)rng.NextDouble() * 0.5f;
+    }
+
     static void InitBalls()
     {
+        RandomizeParams();
+
         float spacingX = SphereRadius * SphereSpacingX;
         float startX = ScreenWidth / 2.0f - (numColumns - 1) * spacingX / 2.0f;
         float spacingY = SphereRadius * SphereSpacingY;
