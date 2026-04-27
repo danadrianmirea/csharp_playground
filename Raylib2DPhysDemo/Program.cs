@@ -52,6 +52,10 @@ class Program
     static double physicsTime = 0;
     static double renderTime = 0;
 
+    // Auto-restart timer
+    const float RestartInterval = 5.0f;
+    static float restartTimer = 0;
+
     static void Main(string[] args)
     {
         Raylib.InitWindow(ScreenWidth, ScreenHeight, "Raylib C# 2D Physics Simulation");
@@ -72,6 +76,14 @@ class Program
 
             if (Raylib.IsKeyPressed(KeyboardKey.R))
                 InitBalls();
+
+            // Auto-restart every RestartInterval seconds
+            restartTimer += dt;
+            if (restartTimer >= RestartInterval)
+            {
+                restartTimer = 0;
+                InitBalls();
+            }
 
             // Physics
             sw.Restart();
@@ -94,7 +106,8 @@ class Program
             Raylib.DrawText($"Spheres: {SphereCount}", 10, sy + ls, 20, Color.LightGray);
             Raylib.DrawText($"Physics: {physicsTime:F1}ms  Render: {renderTime:F1}ms", 10, sy + 2 * ls, 20, Color.LightGray);
             Raylib.DrawText($"Restitution: {Restitution:F2}  Friction: {Friction:F2}  Cols: {numColumns}", 10, sy + 3 * ls, 20, Color.LightGray);
-            Raylib.DrawText("Press R to reset", 10, sy + 4 * ls, 20, Color.LightGray);
+            float timeLeft = RestartInterval - restartTimer;
+            Raylib.DrawText($"Press R to reset  (auto: {timeLeft:F1}s)", 10, sy + 4 * ls, 20, Color.LightGray);
 
             Raylib.EndDrawing();
             renderTime = sw.Elapsed.TotalMilliseconds;
