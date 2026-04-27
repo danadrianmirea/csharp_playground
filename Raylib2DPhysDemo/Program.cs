@@ -12,7 +12,7 @@ class Program
 {
     const int ScreenWidth = 960;
     const int ScreenHeight = 540;
-    const int SphereCount = 1000;
+    const int SphereCount = 2000;
     const float SphereRadius = 6.0f;
     static int numColumns = 20;
     const float SphereSpacingX = 2.1f;
@@ -145,7 +145,7 @@ class Program
 
     static void RandomizeParams()
     {
-        numColumns = rng.Next(4, 31);
+        numColumns = rng.Next(10, 31);
         Restitution = 0.1f + (float)rng.NextDouble() * 0.8f;
         Friction = (float)rng.NextDouble() * 0.5f;
     }
