@@ -12,15 +12,15 @@ class Program
 {
     const int ScreenWidth = 800;
     const int ScreenHeight = 600;
-    const int SphereCount = 1700;
+    const int SphereCount = 2000;
     const float SphereRadius = 6.0f;
-    const int numColumns = 6;
+    const int numColumns = 20;
     const float SphereSpacingX = 2.1f;
     const float SphereSpacingY = 2.1f;    
     const float Gravity = 980.0f;
     const float GroundY = ScreenHeight - 50;
-    const float Restitution = 0.6f;
-    const float Friction = 0.2f;
+    const float Restitution = 0.9f;
+    const float Friction = 0.0f;
 
     // Spatial grid
     const float CellSize = SphereRadius * 4;
@@ -164,6 +164,12 @@ class Program
         for (int i = 0; i < SphereCount; i++)
         {
             Vector2 pos = balls[i].Position;
+
+            // Skip spheres that are entirely outside the screen
+            if (pos.X + SphereRadius < 0 || pos.X - SphereRadius > ScreenWidth ||
+                pos.Y + SphereRadius < 0 || pos.Y - SphereRadius > ScreenHeight)
+                continue;
+
             Rectangle destRect = new Rectangle(
                 pos.X - texRadius, pos.Y - texRadius,
                 texRadius * 2, texRadius * 2
