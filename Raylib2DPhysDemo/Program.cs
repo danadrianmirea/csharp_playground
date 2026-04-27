@@ -51,6 +51,7 @@ class Program
     static Stopwatch sw = new Stopwatch();
     static double physicsTime = 0;
     static double renderTime = 0;
+    static double frameTime = 0;
 
     // Auto-restart timer
     const float RestartInterval = 5.0f;
@@ -91,26 +92,27 @@ class Program
             physicsTime = sw.Elapsed.TotalMilliseconds;
 
             // Render
-            sw.Restart();
             Raylib.BeginDrawing();
             Raylib.ClearBackground(new Color(15, 15, 25, 255));
 
             Raylib.DrawRectangle(0, (int)GroundY, ScreenWidth, 4, Color.SkyBlue);
 
+            sw.Restart();
             DrawSpheres();
+            renderTime = sw.Elapsed.TotalMilliseconds;
 
             // UI
             int ls = 25;
             int sy = 10;
             Raylib.DrawFPS(10, sy);
             Raylib.DrawText($"Spheres: {SphereCount}", 10, sy + ls, 20, Color.LightGray);
-            Raylib.DrawText($"Physics: {physicsTime:F1}ms  Render: {renderTime:F1}ms", 10, sy + 2 * ls, 20, Color.LightGray);
+            Raylib.DrawText($"Physics: {physicsTime:F2}ms  Draw: {renderTime:F2}ms  Frame: {frameTime:F2}ms", 10, sy + 2 * ls, 20, Color.LightGray);
             Raylib.DrawText($"Restitution: {Restitution:F2}  Friction: {Friction:F2}  Cols: {numColumns}", 10, sy + 3 * ls, 20, Color.LightGray);
             float timeLeft = RestartInterval - restartTimer;
             Raylib.DrawText($"Press R to reset  (auto: {timeLeft:F1}s)", 10, sy + 4 * ls, 20, Color.LightGray);
 
             Raylib.EndDrawing();
-            renderTime = sw.Elapsed.TotalMilliseconds;
+            frameTime = sw.Elapsed.TotalMilliseconds;
         }
 
         Raylib.UnloadTexture(circleTexture);
@@ -183,9 +185,6 @@ class Program
 
     static void DrawSpheres()
     {
-        float texRadius = SphereRadius * 2;
-        Rectangle srcRect = new Rectangle(0, 0, circleTexture.Width, circleTexture.Height);
-
         for (int i = 0; i < SphereCount; i++)
         {
             if (!balls[i].IsAlive) continue;
@@ -197,13 +196,9 @@ class Program
                 pos.Y + SphereRadius < 0 || pos.Y - SphereRadius > ScreenHeight)
                 continue;
 
-            Rectangle destRect = new Rectangle(
-                pos.X - texRadius, pos.Y - texRadius,
-                texRadius * 2, texRadius * 2
-            );
-
-            Raylib.DrawTexturePro(circleTexture, srcRect, destRect, Vector2.Zero, 0.0f, balls[i].Color);
-            Raylib.DrawTexturePro(highlightTexture, srcRect, destRect, Vector2.Zero, 0.0f, Color.White);
+            // DrawCircleV is a primitive draw that Raylib batches internally,
+            // much faster than per-sphere DrawTexturePro calls
+            Raylib.DrawCircleV(pos, SphereRadius, balls[i].Color);
         }
     }
 
