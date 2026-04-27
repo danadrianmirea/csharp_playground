@@ -54,7 +54,7 @@ class Program
 
     static void Main(string[] args)
     {
-        Raylib.InitWindow(ScreenWidth, ScreenHeight, "Raylib C# - 1000 Spheres Falling");
+        Raylib.InitWindow(ScreenWidth, ScreenHeight, "Raylib C# 2D Physics Simulation");
         Raylib.SetTargetFPS(60);
 
         // Initialize grid heads to -1
