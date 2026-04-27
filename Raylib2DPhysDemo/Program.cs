@@ -32,6 +32,7 @@ class Program
         public Vector2 Position;
         public Vector2 Velocity;
         public Color Color;
+        public bool IsAlive;
     }
 
     static Ball[] balls = new Ball[SphereCount];
@@ -151,7 +152,8 @@ class Program
                     (int)(rng.NextDouble() * 256),
                     (int)(rng.NextDouble() * 256),
                     255
-                )
+                ),
+                IsAlive = true
             };
         }
     }
@@ -163,6 +165,8 @@ class Program
 
         for (int i = 0; i < SphereCount; i++)
         {
+            if (!balls[i].IsAlive) continue;
+
             Vector2 pos = balls[i].Position;
 
             // Skip spheres that are entirely outside the screen
@@ -189,6 +193,8 @@ class Program
 
         for (int i = 0; i < SphereCount; i++)
         {
+            if (!balls[i].IsAlive) continue;
+
             int col = (int)(balls[i].Position.X / CellSize);
             int row = (int)(balls[i].Position.Y / CellSize);
             col = Math.Clamp(col, 0, GridCols - 1);
@@ -208,20 +214,28 @@ class Program
 
         for (int step = 0; step < substeps; step++)
         {
-            // Phase 1: Apply forces
+            // Phase 1: Apply forces (skip dead balls)
             for (int i = 0; i < SphereCount; i++)
             {
+                if (!balls[i].IsAlive) continue;
+
                 balls[i].Velocity.Y += Gravity * subDt;
                 balls[i].Velocity *= MathF.Max(0, 1.0f - 0.5f * subDt);
                 balls[i].Position += balls[i].Velocity * subDt;
+
+                // Mark balls that fall far below the ground as dead
+                if (balls[i].Position.Y > GroundY + ScreenHeight * 0.5f)
+                    balls[i].IsAlive = false;
             }
 
-            // Phase 2: Build spatial grid
+            // Phase 2: Build spatial grid (only alive balls)
             BuildGrid();
 
-            // Phase 3: Wall/ground collision
+            // Phase 3: Wall/ground collision (only alive balls)
             for (int i = 0; i < SphereCount; i++)
             {
+                if (!balls[i].IsAlive) continue;
+
                 if (balls[i].Position.Y + SphereRadius > GroundY)
                 {
                     balls[i].Position.Y = GroundY - SphereRadius;
@@ -246,9 +260,11 @@ class Program
             }
 
             // Phase 4: Sphere-sphere collision via spatial grid
-            // Check each ball against others in its cell and adjacent cells
+            // Check each alive ball against others in its cell and adjacent cells
             for (int i = 0; i < SphereCount; i++)
             {
+                if (!balls[i].IsAlive) continue;
+
                 int cell = gridCellIdx[i];
                 int row = cell / GridCols;
                 int col = cell % GridCols;
