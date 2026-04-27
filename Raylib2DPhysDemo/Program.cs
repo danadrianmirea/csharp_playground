@@ -10,8 +10,8 @@ namespace Raylib2DPhysDemo;
 /// </summary>
 class Program
 {
-    const int ScreenWidth = 800;
-    const int ScreenHeight = 600;
+    const int ScreenWidth = 960;
+    const int ScreenHeight = 540;
     const int SphereCount = 1000;
     const float SphereRadius = 6.0f;
     static int numColumns = 20;
