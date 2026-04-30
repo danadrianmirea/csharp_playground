@@ -15,7 +15,7 @@ class Program
     // --- Window & Simulation Constants ---
     const int ScreenWidth = 960;
     const int ScreenHeight = 540;
-    const int NumSwarms = 10;
+    const int NumSwarms = 20;
     const int BoidsPerSwarm = 500;
     const int BoidCount = NumSwarms * BoidsPerSwarm;
     const float BoidSize = 12.0f;
