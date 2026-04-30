@@ -8,13 +8,16 @@ namespace Raylib2DSwarm;
 /// <summary>
 /// 2D boids flocking simulation using triangular agents.
 /// Implements Craig Reynolds' boids algorithm with separation, alignment, and cohesion.
+/// Supports multiple swarms, each with its own color.
 /// </summary>
 class Program
 {
     // --- Window & Simulation Constants ---
-    const int ScreenWidth = 1280;
-    const int ScreenHeight = 720;
-    const int BoidCount = 100;
+    const int ScreenWidth = 960;
+    const int ScreenHeight = 540;
+    const int NumSwarms = 10;
+    const int BoidsPerSwarm = 300;
+    const int BoidCount = NumSwarms * BoidsPerSwarm;
     const float BoidSize = 12.0f; // triangle side length
     const float MaxSpeed = 200.0f;
     const float MaxForce = 100.0f;
@@ -35,10 +38,12 @@ class Program
         public Vector2 Position;
         public Vector2 Velocity;
         public Vector2 Acceleration;
+        public int SwarmIndex;
         public Color Color;
     }
 
     static Boid[] boids = new Boid[BoidCount];
+    static Color[] swarmColors = new Color[NumSwarms];
     static Random rng = new Random();
 
     static void Main(string[] args)
@@ -46,6 +51,7 @@ class Program
         Raylib.InitWindow(ScreenWidth, ScreenHeight, "Raylib C# 2D Boids Flocking Simulation");
         Raylib.SetTargetFPS(60);
 
+        InitSwarmColors();
         InitBoids();
 
         while (!Raylib.WindowShouldClose())
@@ -68,13 +74,32 @@ class Program
             // UI
             int ls = 25;
             Raylib.DrawFPS(10, 10);
-            Raylib.DrawText($"Boids: {BoidCount}", 10, 10 + ls, 20, Color.LightGray);
+            Raylib.DrawText($"Swarms: {NumSwarms}  |  Boids: {BoidCount}", 10, 10 + ls, 20, Color.LightGray);
             Raylib.DrawText("R to reset  |  Click to attract  |  Right-click to repel", 10, 10 + 2 * ls, 20, Color.LightGray);
+
+            // Draw swarm color legend
+            // for (int s = 0; s < NumSwarms; s++)
+            // {
+            //     int x = 10 + s * 30;
+            //     int y = 10 + 4 * ls;
+            //     Raylib.DrawRectangle(x, y, 20, 20, swarmColors[s]);
+            //     Raylib.DrawRectangleLines(x, y, 20, 20, Color.White);
+            // }
 
             Raylib.EndDrawing();
         }
 
         Raylib.CloseWindow();
+    }
+
+    static void InitSwarmColors()
+    {
+        // Generate evenly spaced hues for each swarm
+        for (int s = 0; s < NumSwarms; s++)
+        {
+            float hue = (float)s / NumSwarms * 360.0f;
+            swarmColors[s] = ColorFromHSV(hue, 0.85f, 0.95f);
+        }
     }
 
     static void HandleInput()
@@ -88,25 +113,33 @@ class Program
     static void InitBoids()
     {
         float margin = 80.0f;
-        for (int i = 0; i < BoidCount; i++)
+        int index = 0;
+
+        for (int s = 0; s < NumSwarms; s++)
         {
-            float angle = (float)(rng.NextDouble() * Math.PI * 2);
-            float speed = MaxSpeed * (0.5f + (float)rng.NextDouble() * 0.5f);
+            // Each swarm spawns in its own region of the screen
+            float regionWidth = (ScreenWidth - 2 * margin) / NumSwarms;
 
-            // Generate a nice color palette
-            float hue = (float)i / BoidCount;
-            Color col = ColorFromHSV(hue * 360.0f, 0.8f, 0.9f);
-
-            boids[i] = new Boid
+            for (int i = 0; i < BoidsPerSwarm; i++)
             {
-                Position = new Vector2(
-                    margin + (float)rng.NextDouble() * (ScreenWidth - 2 * margin),
-                    margin + (float)rng.NextDouble() * (ScreenHeight - 2 * margin)
-                ),
-                Velocity = new Vector2(MathF.Cos(angle) * speed, MathF.Sin(angle) * speed),
-                Acceleration = Vector2.Zero,
-                Color = col
-            };
+                float angle = (float)(rng.NextDouble() * Math.PI * 2);
+                float speed = MaxSpeed * (0.5f + (float)rng.NextDouble() * 0.5f);
+
+                float regionStartX = margin + s * regionWidth;
+
+                boids[index] = new Boid
+                {
+                    Position = new Vector2(
+                        regionStartX + (float)rng.NextDouble() * regionWidth,
+                        margin + (float)rng.NextDouble() * (ScreenHeight - 2 * margin)
+                    ),
+                    Velocity = new Vector2(MathF.Cos(angle) * speed, MathF.Sin(angle) * speed),
+                    Acceleration = Vector2.Zero,
+                    SwarmIndex = s,
+                    Color = swarmColors[s]
+                };
+                index++;
+            }
         }
     }
 
@@ -176,10 +209,8 @@ class Program
             pos.Y + MathF.Sin(angle - 2.5f) * backOffset
         );
 
-        Raylib.DrawTriangle(tip, left, right, boid.Color);
-
-        // Draw a small outline for visibility
-        Raylib.DrawTriangleLines(tip, left, right, Color.White);
+        // Filled triangle with swarm color (counter-clockwise winding)
+        Raylib.DrawTriangle(tip, right, left, boid.Color);
     }
 
     static void UpdateBoids(float dt)
@@ -215,7 +246,7 @@ class Program
                 {
                     float dist = MathF.Sqrt(distSq);
 
-                    // Separation: steer away from nearby boids
+                    // Separation: steer away from nearby boids (all swarms)
                     if (dist < SeparationRadius && dist > 0.001f)
                     {
                         Vector2 away = Vector2.Normalize(diff) / dist;
@@ -223,12 +254,13 @@ class Program
                         separationNeighbors++;
                     }
 
-                    // Alignment: match velocity of nearby boids
-                    alignment += boids[j].Velocity;
-                    neighbors++;
-
-                    // Cohesion: steer toward center of mass of nearby boids
-                    cohesion += boids[j].Position;
+                    // Alignment & Cohesion: only consider same-swarm boids
+                    if (boids[j].SwarmIndex == boids[i].SwarmIndex)
+                    {
+                        alignment += boids[j].Velocity;
+                        cohesion += boids[j].Position;
+                        neighbors++;
+                    }
                 }
             }
 
