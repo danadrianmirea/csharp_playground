@@ -24,6 +24,41 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Raylib2DPhysDemo/**/*.cs" />
+    <None Remove="Raylib2DPhysDemo/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Raylib2DSwarm/**/*.cs" />
+    <None Remove="Raylib2DSwarm/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Raylib2DWater/**/*.cs" />
+    <None Remove="Raylib2DWater/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="RaylibApiCheck/**/*.cs" />
+    <None Remove="RaylibApiCheck/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="RaylibDemo/**/*.cs" />
+    <None Remove="RaylibDemo/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="RaylibPhysDemo/**/*.cs" />
+    <None Remove="RaylibPhysDemo/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="TextEditor/**/*.cs" />
+    <None Remove="TextEditor/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OpenTK" Version="4.9.4" />
     <PackageReference Include="Raylib-cs" Version="7.0.2" />
   </ItemGroup>
